@@ -3,7 +3,7 @@ import { Banknote, CalendarClock, MessageCircle, Receipt, Wallet } from 'lucide-
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Avatar, Encabezado } from '../components/ui'
-import { calcularSaldo, db, enlaceWhatsApp, hoy, rellenar, varsPlantilla, type Consulta, type Pago, type Paciente } from '../lib/db'
+import { avisoWhatsApp, calcularSaldo, db, hoy, varsPlantilla, type Consulta, type Pago, type Paciente } from '../lib/db'
 import { dinero, fechaCorta, hora } from '../lib/format'
 import { useConfig } from '../lib/useConfig'
 
@@ -107,7 +107,7 @@ export default function Caja() {
         {datos.deudores.length === 0 ? <p className="p-4 text-sm text-slate-500">Nadie tiene deudas. 🎉</p> :
           datos.deudores.map(({ p, saldo }) => (
             <Fila key={p.id} p={p} detalle={`Debe Bs ${dinero(saldo)}`} detalleCls="text-rose-600 font-semibold"
-              wa={enlaceWhatsApp(p.telefono, rellenar(config.plantillas.saldo, { ...varsPlantilla(config, p), saldo: dinero(saldo) }))} />
+              wa={avisoWhatsApp(p, config.plantillas.saldo, { ...varsPlantilla(config, p), saldo: dinero(saldo) })} />
           ))}
       </Seccion>
 
@@ -118,7 +118,7 @@ export default function Caja() {
             return (
               <Fila key={p.id} p={p} detalle={`${vencido ? 'Venció' : 'Toca'} el ${fechaCorta(ultima.proximoControl!)}`}
                 detalleCls={vencido ? 'text-amber-600 font-medium' : ''}
-                wa={enlaceWhatsApp(p.telefono, rellenar(config.plantillas.control, varsPlantilla(config, p)))} />
+                wa={avisoWhatsApp(p, config.plantillas.control, varsPlantilla(config, p))} />
             )
           })}
       </Seccion>

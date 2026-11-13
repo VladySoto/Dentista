@@ -11,6 +11,9 @@ Pensada para un dentista que trabaja solo: la app le ahorra pasos entre paciente
 - **Caja**: cobrado hoy y en el mes, pacientes que deben, controles por avisar.
 - **Mensajes de WhatsApp**: plantillas editables (cita, control, saldo) que se abren listas en WhatsApp Business.
 - **Pagos a cuenta**: registrar abonos de deudas.
+- **Pacientes sin celular**: "+1 llegada" crea un turno sin nombre (para fichas de papel numeradas); se identifica al paciente cuando entra.
+- **Familiar o contacto**: nombre, parentesco y teléfono; los avisos de WhatsApp pueden ir a ese número.
+- **Próxima cita en la ficha**: para copiarla en la tarjeta de cita de papel.
 - **Citas**: agenda por día, estados (pendiente, confirmada, llegó, cancelada), recordatorio por WhatsApp; "Llegó" pasa la cita a la cola.
 - **Pacientes**: búsqueda por nombre, CI o teléfono; antecedentes médicos.
 - **Historial clínico**: consultas con diagnóstico, tratamiento, piezas, costo y saldo pendiente.

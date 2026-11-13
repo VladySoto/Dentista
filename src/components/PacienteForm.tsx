@@ -43,6 +43,22 @@ export default function PacienteForm({ inicial, nombreInicial = '', onGuardado }
           <Campo label="Medicamentos actuales"><input className="input" value={p.medicamentos ?? ''} onChange={set('medicamentos')} /></Campo>
         </div>
       </div>
+      <div className="rounded-2xl bg-sky-50 p-4">
+        <p className="text-sm font-semibold text-sky-900">Familiar o contacto <span className="font-normal text-sky-700">(opcional)</span></p>
+        <p className="mb-3 text-xs text-sky-700">Útil si el paciente no tiene celular o no usa WhatsApp.</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Campo label="Nombre"><input className="input" placeholder="Ej: Carla" value={p.contactoNombre ?? ''} onChange={set('contactoNombre')} /></Campo>
+          <Campo label="Parentesco"><input className="input" placeholder="Ej: Hija" value={p.contactoParentesco ?? ''} onChange={set('contactoParentesco')} /></Campo>
+        </div>
+        <div className="mt-3"><Campo label="Teléfono del contacto"><input className="input" type="tel" value={p.contactoTelefono ?? ''} onChange={set('contactoTelefono')} /></Campo></div>
+        {p.contactoTelefono && (
+          <label className="mt-3 flex items-center gap-2.5 text-sm text-sky-900">
+            <input type="checkbox" className="h-5 w-5 accent-teal-600" checked={!!p.avisarContacto || !p.telefono}
+              disabled={!p.telefono} onChange={(e) => setP({ ...p, avisarContacto: e.target.checked })} />
+            Enviar los avisos de WhatsApp a este contacto{!p.telefono && ' (el paciente no tiene teléfono)'}
+          </label>
+        )}
+      </div>
       <Campo label="Notas"><textarea className="input" rows={2} value={p.notas ?? ''} onChange={set('notas')} /></Campo>
       <button className="btn-primary w-full" disabled={guardando}>{inicial ? 'Guardar cambios' : 'Registrar paciente'}</button>
     </form>

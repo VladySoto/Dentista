@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import {
-  AlertTriangle, ArrowLeft, Banknote, CalendarClock, ClipboardList, MessageCircle, Pencil, Phone, Plus, Stethoscope, Trash2, Wallet,
+  AlertTriangle, ArrowLeft, Banknote, CalendarClock, CalendarDays, UserRound, ClipboardList, MessageCircle, Pencil, Phone, Plus, Stethoscope, Trash2, Wallet,
 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -9,9 +9,9 @@ import Odontograma from '../components/Odontograma'
 import PacienteForm from '../components/PacienteForm'
 import { Avatar, Campo, Modal, Vacio } from '../components/ui'
 import {
-  calcularSaldo, db, enlaceWhatsApp, hoy, llamarSiguiente, rellenar, varsPlantilla, type Consulta, type Pago,
+  avisoWhatsApp, calcularSaldo, db, enlaceWhatsApp, hoy, llamarSiguiente, varsPlantilla, type Consulta, type Pago,
 } from '../lib/db'
-import { dinero, duracion, edad, fechaCorta, hora, minutosDesde } from '../lib/format'
+import { dinero, duracion, edad, fechaCorta, fechaLarga, hora, minutosDesde } from '../lib/format'
 import { useAhora } from '../lib/useAhora'
 import { useConfig } from '../lib/useConfig'
 
@@ -27,10 +27,17 @@ export default function PacienteDetalle() {
   const [editar, setEditar] = useState(false)
   const [modalConsulta, setModalConsulta] = useState<ModalConsulta>(null)
   const [modalPago, setModalPago] = useState(false)
+  const [modalCita, setModalCita] = useState(false)
 
   const p = useLiveQuery(() => db.pacientes.get(id), [id])
   const consultas = useLiveQuery(() => db.consultas.where('pacienteId').equals(id).toArray(), [id])
   const pagos = useLiveQuery(() => db.pagos.where('pacienteId').equals(id).toArray(), [id])
+  const proximaCita = useLiveQuery(async () => {
+    const citas = await db.citas.where('pacienteId').equals(id).toArray()
+    return citas
+      .filter((c) => c.fecha >= hoy() && (c.estado === 'pendiente' || c.estado === 'confirmada'))
+      .sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora))[0] ?? null
+  }, [id])
   const fila = useLiveQuery(async () => {
     const turnos = await db.turnos.where('fecha').equals(hoy()).toArray()
     return {
@@ -46,8 +53,9 @@ export default function PacienteDetalle() {
   const saldo = calcularSaldo(consultas, pagos)
   const vars = { ...varsPlantilla(config, p), saldo: dinero(saldo) }
   const waChat = enlaceWhatsApp(p.telefono)
-  const waSaldo = enlaceWhatsApp(p.telefono, rellenar(config.plantillas.saldo, vars))
+  const waSaldo = avisoWhatsApp(p, config.plantillas.saldo, vars)
   const turno = fila?.activo
+  const waCita = proximaCita && avisoWhatsApp(p, config.plantillas.cita, { ...vars, fecha: fechaLarga(proximaCita.fecha), hora: proximaCita.hora })
 
   const historial = [
     ...consultas.map((c) => ({ tipo: 'consulta' as const, fecha: c.fecha, c })),
@@ -60,7 +68,7 @@ export default function PacienteDetalle() {
     if (modo !== 'turno' || !turno) return
     await db.turnos.update(turno.id!, { estado: 'atendido', fin: Date.now() })
     const sig = siguiente ? await llamarSiguiente() : null
-    navigate(sig ? `/pacientes/${sig.pacienteId}` : '/')
+    navigate(!sig ? '/' : sig.pacienteId ? `/pacientes/${sig.pacienteId}` : `/?identificar=${sig.id}`)
   }
 
   async function terminarSinRegistrar() {
@@ -113,6 +121,16 @@ export default function PacienteDetalle() {
             </div>
           </div>
         </div>
+        {(p.contactoNombre || p.contactoTelefono) && (
+          <div className="mt-4 flex items-center gap-3 rounded-xl bg-sky-50 p-3 text-sm text-sky-900">
+            <UserRound size={18} className="shrink-0 text-sky-600" />
+            <p className="min-w-0 flex-1">
+              <b>Contacto:</b> {p.contactoNombre}{p.contactoParentesco && ` (${p.contactoParentesco})`}{p.contactoTelefono && ` · ${p.contactoTelefono}`}
+              {p.contactoTelefono && (p.avisarContacto || !p.telefono) && <span className="block text-xs text-sky-700">Los avisos de WhatsApp van a este contacto</span>}
+            </p>
+            {p.contactoTelefono && <a href={`tel:${p.contactoTelefono}`} className="btn bg-white px-3 py-1.5 text-xs text-sky-700 hover:bg-sky-100"><Phone size={14} /> Llamar</a>}
+          </div>
+        )}
         {(p.alergias || p.enfermedades || p.medicamentos) && (
           <div className="mt-4 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
             <AlertTriangle size={20} className="shrink-0 text-amber-500" />
@@ -133,6 +151,25 @@ export default function PacienteDetalle() {
           </div>
         )}
       </div>
+
+      {proximaCita !== undefined && (
+        proximaCita ? (
+          <div className="card mb-4 flex items-center gap-3 border-dashed border-teal-300 p-4">
+            <div className="rounded-xl bg-teal-50 p-2.5 text-teal-600"><CalendarDays size={22} /></div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Próxima cita</p>
+              <p className="text-lg font-bold leading-tight first-letter:uppercase">{fechaLarga(proximaCita.fecha).replace(/ de \d{4}$/, '')}</p>
+              <p className="text-lg font-bold text-teal-700">{proximaCita.hora}</p>
+              {proximaCita.motivo && <p className="truncate text-sm text-slate-500">{proximaCita.motivo}</p>}
+            </div>
+            {waCita && <a href={waCita} target="_blank" rel="noreferrer" className="btn-soft px-3 py-2 text-xs"><MessageCircle size={15} /> Recordar</a>}
+          </div>
+        ) : (
+          <button className="btn-ghost mb-4 w-full border border-dashed border-slate-300 py-3" onClick={() => setModalCita(true)}>
+            <CalendarDays size={18} /> Agendar próxima cita
+          </button>
+        )
+      )}
 
       <div className="mb-4 grid grid-cols-3 rounded-xl bg-slate-200/60 p-1">
         {([['historial', 'Historial'], ['odontograma', 'Odontograma'], ['datos', 'Datos']] as const).map(([k, l]) => (
@@ -193,7 +230,9 @@ export default function PacienteDetalle() {
             ['Teléfono', p.telefono], ['CI / Documento', p.documento],
             ['Nacimiento', p.fechaNacimiento && fechaCorta(p.fechaNacimiento)],
             ['Sexo', { F: 'Femenino', M: 'Masculino', O: 'Otro' }[p.sexo as 'F'] ?? ''],
-            ['Dirección', p.direccion], ['Notas', p.notas], ['Registrado', fechaCorta(p.creado)],
+            ['Dirección', p.direccion],
+            ['Contacto', [p.contactoNombre, p.contactoParentesco && `(${p.contactoParentesco})`, p.contactoTelefono].filter(Boolean).join(' ')],
+            ['Notas', p.notas], ['Registrado', fechaCorta(p.creado)],
           ] as const).map(([k, v]) => (
             <div key={k} className="flex gap-4 px-4 py-3"><span className="w-32 shrink-0 text-slate-500">{k}</span><span>{v || '—'}</span></div>
           ))}
@@ -221,6 +260,10 @@ export default function PacienteDetalle() {
             if (confirm('¿Eliminar esta consulta?')) { await db.consultas.delete(modalConsulta.consulta.id!); setModalConsulta(null) }
           }}><Trash2 size={16} /> Eliminar consulta</button>
         )}
+      </Modal>
+
+      <Modal abierto={modalCita} onCerrar={() => setModalCita(false)} titulo="Agendar cita">
+        <FormCita pacienteId={id} onListo={() => setModalCita(false)} />
       </Modal>
 
       <Modal abierto={modalPago} onCerrar={() => setModalPago(false)} titulo="Registrar pago">
@@ -260,6 +303,25 @@ function FormPago({ pacienteId, saldo, onListo }: { pacienteId: number; saldo: n
       <Campo label="Monto (Bs)"><input className="input" type="number" inputMode="decimal" min="0" step="any" value={monto} onChange={(e) => setMonto(e.target.value)} autoFocus /></Campo>
       <Campo label="Nota (opcional)"><input className="input" placeholder="Ej: QR, efectivo…" value={nota} onChange={(e) => setNota(e.target.value)} /></Campo>
       <button className="btn-primary w-full">Guardar pago</button>
+    </form>
+  )
+}
+
+function FormCita({ pacienteId, onListo }: { pacienteId: number; onListo: () => void }) {
+  const manana = new Date(); manana.setDate(manana.getDate() + 1)
+  const [f, setF] = useState({ fecha: hoy(manana), hora: '09:00', motivo: '' })
+  return (
+    <form className="space-y-4" onSubmit={async (e) => {
+      e.preventDefault()
+      await db.citas.add({ pacienteId, fecha: f.fecha, hora: f.hora, motivo: f.motivo.trim() || undefined, estado: 'pendiente' })
+      onListo()
+    }}>
+      <div className="grid grid-cols-2 gap-3">
+        <Campo label="Fecha"><input className="input" type="date" required value={f.fecha} onChange={(e) => setF({ ...f, fecha: e.target.value })} /></Campo>
+        <Campo label="Hora"><input className="input" type="time" required value={f.hora} onChange={(e) => setF({ ...f, hora: e.target.value })} /></Campo>
+      </div>
+      <Campo label="Motivo"><input className="input" placeholder="Ej: continuar endodoncia" value={f.motivo} onChange={(e) => setF({ ...f, motivo: e.target.value })} /></Campo>
+      <button className="btn-primary w-full">Agendar</button>
     </form>
   )
 }

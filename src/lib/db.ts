@@ -15,6 +15,12 @@ export interface Paciente {
   enfermedades?: string
   medicamentos?: string
   notas?: string
+  /** Familiar o persona de contacto (para pacientes sin celular). */
+  contactoNombre?: string
+  contactoParentesco?: string
+  contactoTelefono?: string
+  /** Enviar los avisos de WhatsApp al contacto en vez de al paciente. */
+  avisarContacto?: boolean
   dientes?: Record<number, EstadoDiente>
   creado: number
 }
@@ -24,7 +30,8 @@ export type EstadoTurno = 'espera' | 'atencion' | 'atendido' | 'cancelado'
 /** Turno de la cola de atención por orden de llegada. */
 export interface Turno {
   id?: number
-  pacienteId: number
+  /** Vacío si llegó con ficha de papel y aún no se identificó. */
+  pacienteId?: number
   fecha: string // YYYY-MM-DD
   numero: number
   motivo?: string
@@ -168,11 +175,12 @@ export function calcularSaldo(consultas: Consulta[], pagos: Pago[]) {
 export async function llamarSiguiente() {
   const siguiente = (await db.turnos.where('fecha').equals(hoy()).sortBy('numero')).find((t) => t.estado === 'espera')
   if (!siguiente) return null
-  await db.turnos.update(siguiente.id!, { estado: 'atencion', inicio: Date.now() })
-  return siguiente
+  const cambios = { estado: 'atencion' as const, inicio: Date.now() }
+  await db.turnos.update(siguiente.id!, cambios)
+  return { ...siguiente, ...cambios }
 }
 
-export async function registrarLlegada(pacienteId: number, motivo?: string) {
+export async function registrarLlegada(pacienteId?: number, motivo?: string) {
   const fecha = hoy()
   return db.transaction('rw', db.turnos, async () => {
     const ultimo = await db.turnos.where('[fecha+numero]').between([fecha, 0], [fecha, Infinity]).last()
@@ -226,4 +234,17 @@ export function sumarMeses(meses: number, desde = new Date()) {
   const d = new Date(desde)
   d.setMonth(d.getMonth() + meses)
   return hoy(d)
+}
+
+/**
+ * Enlace de WhatsApp con la plantilla rellenada. Si el aviso va al familiar,
+ * lo saluda a él y aclara al final de qué paciente se trata.
+ */
+export function avisoWhatsApp(p: Paciente | undefined, plantilla: string, vars: Record<string, string | number | undefined>) {
+  if (!p) return null
+  const alContacto = !!p.contactoTelefono && (p.avisarContacto || !p.telefono)
+  if (!alContacto) return enlaceWhatsApp(p.telefono, rellenar(plantilla, vars))
+  const contacto = p.contactoNombre?.trim().split(/\s+/)[0] ?? ''
+  const texto = rellenar(plantilla, { ...vars, nombre: contacto }).replace(/^Hola\s+([,!👋 ])/u, 'Hola$1')
+  return enlaceWhatsApp(p.contactoTelefono, `${texto}\n\n(Paciente: ${p.nombre})`)
 }

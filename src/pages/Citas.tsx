@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import PacienteSelector from '../components/PacienteSelector'
 import { Campo, Encabezado, Modal, Vacio } from '../components/ui'
-import { db, enlaceWhatsApp, hoy, rellenar, varsPlantilla, type Cita, type EstadoCita } from '../lib/db'
+import { avisoWhatsApp, db, hoy, varsPlantilla, type Cita, type EstadoCita } from '../lib/db'
 import { fechaLarga } from '../lib/format'
 import { useConfig } from '../lib/useConfig'
 
@@ -46,7 +46,7 @@ export default function Citas() {
 
   function recordatorio(c: Cita) {
     const p = datos?.pacientes.get(c.pacienteId)
-    return enlaceWhatsApp(p?.telefono, rellenar(config.plantillas.cita, { ...varsPlantilla(config, p), fecha: fechaLarga(c.fecha), hora: c.hora }))
+    return avisoWhatsApp(p, config.plantillas.cita, { ...varsPlantilla(config, p), fecha: fechaLarga(c.fecha), hora: c.hora })
   }
 
   const dias = Array.from({ length: 7 }, (_, i) => moverDia(hoy(), i))
