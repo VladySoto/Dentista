@@ -4,8 +4,9 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import PacienteSelector from '../components/PacienteSelector'
 import { Campo, Encabezado, Modal, Vacio } from '../components/ui'
-import { db, hoy, type Cita, type EstadoCita } from '../lib/db'
+import { db, enlaceWhatsApp, hoy, rellenar, varsPlantilla, type Cita, type EstadoCita } from '../lib/db'
 import { fechaLarga } from '../lib/format'
+import { useConfig } from '../lib/useConfig'
 
 const ESTADO: Record<EstadoCita, { label: string; cls: string }> = {
   pendiente: { label: 'Pendiente', cls: 'bg-slate-100 text-slate-600' },
@@ -19,6 +20,7 @@ function moverDia(fecha: string, dias: number) {
 }
 
 export default function Citas() {
+  const config = useConfig()
   const [fecha, setFecha] = useState(hoy())
   const [modal, setModal] = useState(false)
   const [pacienteId, setPacienteId] = useState<number | null>(null)
@@ -44,10 +46,7 @@ export default function Citas() {
 
   function recordatorio(c: Cita) {
     const p = datos?.pacientes.get(c.pacienteId)
-    const tel = p?.telefono?.replace(/\D/g, '')
-    if (!tel) return null
-    const msg = `Hola ${p!.nombre.split(' ')[0]}, le recordamos su cita en el consultorio dental el ${fechaLarga(c.fecha)} a las ${c.hora}. ¿Nos confirma su asistencia?`
-    return `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`
+    return enlaceWhatsApp(p?.telefono, rellenar(config.plantillas.cita, { ...varsPlantilla(config, p), fecha: fechaLarga(c.fecha), hora: c.hora }))
   }
 
   const dias = Array.from({ length: 7 }, (_, i) => moverDia(hoy(), i))

@@ -1,11 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { AlertTriangle, CalendarCheck, CheckCircle2, Clock, Play, Plus, Stethoscope, Users, X } from 'lucide-react'
+import { AlertTriangle, Banknote, CalendarCheck, CheckCircle2, ChevronRight, Megaphone, Play, Plus, Users, X } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import PacienteSelector from '../components/PacienteSelector'
 import { Avatar, Encabezado, Modal, Vacio } from '../components/ui'
-import { db, hoy, registrarLlegada, type Paciente, type Turno } from '../lib/db'
-import { duracion, fechaLarga, hora, minutosDesde } from '../lib/format'
+import { db, hoy, llamarSiguiente, registrarLlegada, type Paciente, type Turno } from '../lib/db'
+import { dinero, duracion, fechaLarga, hora, minutosDesde } from '../lib/format'
 import { useAhora } from '../lib/useAhora'
 
 export default function SalaEspera() {
@@ -22,18 +22,22 @@ export default function SalaEspera() {
     const citas = await db.citas.where('fecha').equals(fecha).sortBy('hora')
     const ids = [...new Set([...turnos.map((t) => t.pacienteId), ...citas.map((c) => c.pacienteId)])]
     const pacientes = new Map((await db.pacientes.bulkGet(ids)).filter(Boolean).map((p) => [p!.id!, p!]))
-    return { turnos, citas, pacientes }
+    const inicio = new Date(fecha + 'T00:00').getTime()
+    const fin = inicio + 86400000
+    const [consultas, pagos] = await Promise.all([
+      db.consultas.where('fecha').between(inicio, fin).toArray(),
+      db.pagos.where('fecha').between(inicio, fin).toArray(),
+    ])
+    const cobrado = consultas.reduce((s, c) => s + (c.pagado ?? 0), 0) + pagos.reduce((s, p) => s + p.monto, 0)
+    return { turnos, citas, pacientes, cobrado }
   }, [fecha])
 
   if (!datos) return null
-  const { turnos, citas, pacientes } = datos
+  const { turnos, citas, pacientes, cobrado } = datos
   const espera = turnos.filter((t) => t.estado === 'espera')
   const atencion = turnos.filter((t) => t.estado === 'atencion')
   const atendidos = turnos.filter((t) => t.estado === 'atendido')
   const citasPendientes = citas.filter((c) => c.estado === 'pendiente' || c.estado === 'confirmada')
-  const conDuracion = atendidos.filter((t) => t.inicio)
-  const promedio = conDuracion.length
-    ? Math.round(conDuracion.reduce((s, t) => s + (t.inicio! - t.llegada), 0) / conDuracion.length / 60000) : null
 
   function cerrar() { setModal(false); setElegido(null); setMotivo(''); setTicket(null) }
 
@@ -47,12 +51,16 @@ export default function SalaEspera() {
     await db.citas.update(citaId, { estado: 'llego' })
   }
 
-  const atender = (t: Turno) => db.turnos.update(t.id!, { estado: 'atencion', inicio: Date.now() })
-  const cancelar = (t: Turno) => confirm('¿Quitar de la sala de espera?') && db.turnos.update(t.id!, { estado: 'cancelado' })
-  async function finalizar(t: Turno) {
-    await db.turnos.update(t.id!, { estado: 'atendido', fin: Date.now() })
-    navigate(`/pacientes/${t.pacienteId}?consulta=nueva${t.motivo ? `&motivo=${encodeURIComponent(t.motivo)}` : ''}`)
+  async function atender(t: Turno) {
+    await db.turnos.update(t.id!, { estado: 'atencion', inicio: Date.now() })
+    navigate(`/pacientes/${t.pacienteId}`)
   }
+  async function siguiente() {
+    const t = await llamarSiguiente()
+    if (t) navigate(`/pacientes/${t.pacienteId}`)
+  }
+  const cancelar = (t: Turno) => confirm('¿Quitar de la sala de espera?') && db.turnos.update(t.id!, { estado: 'cancelado' })
+  const proximo = espera[0]
 
   return (
     <>
@@ -62,8 +70,20 @@ export default function SalaEspera() {
       <div className="mb-6 grid grid-cols-3 gap-3">
         <Stat icono={<Users size={18} />} valor={espera.length} label="En espera" />
         <Stat icono={<CheckCircle2 size={18} />} valor={atendidos.length} label="Atendidos" />
-        <Stat icono={<Clock size={18} />} valor={promedio !== null ? duracion(promedio) : '—'} label="Espera prom." />
+        <Stat icono={<Banknote size={18} />} valor={`Bs ${dinero(cobrado)}`} label="Cobrado hoy" />
       </div>
+
+      {proximo && atencion.length === 0 && (
+        <button onClick={siguiente}
+          className="mb-6 flex w-full items-center gap-4 rounded-2xl bg-gradient-to-br from-teal-600 to-cyan-700 p-4 text-left text-white shadow-lg shadow-teal-700/20 transition active:scale-[.99]">
+          <div className="rounded-xl bg-white/20 p-3"><Megaphone size={24} /></div>
+          <div className="min-w-0 flex-1">
+            <p className="text-lg font-bold">Llamar siguiente</p>
+            <p className="truncate text-sm text-teal-50">Turno {proximo.numero} · {pacientes.get(proximo.pacienteId)?.nombre}</p>
+          </div>
+          <ChevronRight size={24} />
+        </button>
+      )}
 
       {atencion.length > 0 && (
         <section className="mb-6">
@@ -71,7 +91,7 @@ export default function SalaEspera() {
           <div className="space-y-2">
             {atencion.map((t) => (
               <TurnoCard key={t.id} t={t} p={pacientes.get(t.pacienteId)} ahora={ahora} activo>
-                <button className="btn-primary" onClick={() => finalizar(t)}><Stethoscope size={17} /> Finalizar</button>
+                <Link className="btn-primary" to={`/pacientes/${t.pacienteId}`}>Abrir ficha</Link>
               </TurnoCard>
             ))}
           </div>
@@ -89,7 +109,7 @@ export default function SalaEspera() {
             {espera.map((t, i) => (
               <TurnoCard key={t.id} t={t} p={pacientes.get(t.pacienteId)} ahora={ahora} siguiente={i === 0}>
                 <button className="btn-ghost p-2.5" onClick={() => cancelar(t)} aria-label="Quitar"><X size={18} /></button>
-                <button className={i === 0 ? 'btn-primary' : 'btn-soft'} onClick={() => atender(t)}><Play size={16} /> Atender</button>
+                <button className={i === 0 && atencion.length > 0 ? 'btn-primary' : 'btn-soft'} onClick={() => atender(t)}><Play size={16} /> Atender</button>
               </TurnoCard>
             ))}
           </div>

@@ -2,8 +2,15 @@
 
 App web instalable (PWA) para un consultorio dental que atiende **por orden de llegada**, con citas opcionales e historial clínico.
 
+Pensada para un dentista que trabaja solo: la app le ahorra pasos entre paciente y paciente.
+
 ## Funciones
-- **Sala de espera**: registrar llegada → número de turno automático, tiempo de espera en vivo, "Atender" / "Finalizar", alerta de alergias.
+- **Sala de espera**: registrar llegada → número de turno automático, tiempo de espera en vivo, alerta de alergias, cobrado del día.
+- **Llamar siguiente**: un toque abre la ficha del próximo paciente; al terminar, "Guardar y llamar siguiente" cierra la consulta y pasa al otro.
+- **Consulta rápida**: tratamientos frecuentes como botones con su precio (se suman solos), "Pagó todo" / "No pagó", recordar control en N meses.
+- **Caja**: cobrado hoy y en el mes, pacientes que deben, controles por avisar.
+- **Mensajes de WhatsApp**: plantillas editables (cita, control, saldo) que se abren listas en WhatsApp Business.
+- **Pagos a cuenta**: registrar abonos de deudas.
 - **Citas**: agenda por día, estados (pendiente, confirmada, llegó, cancelada), recordatorio por WhatsApp; "Llegó" pasa la cita a la cola.
 - **Pacientes**: búsqueda por nombre, CI o teléfono; antecedentes médicos.
 - **Historial clínico**: consultas con diagnóstico, tratamiento, piezas, costo y saldo pendiente.
