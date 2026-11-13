@@ -9,6 +9,9 @@ import Citas from './pages/Citas'
 import PacienteDetalle from './pages/PacienteDetalle'
 import Pacientes from './pages/Pacientes'
 import SalaEspera from './pages/SalaEspera'
+import { iniciarSincronizacion } from './lib/sync'
+
+iniciarSincronizacion()
 
 // Pide al navegador que no borre los datos locales automáticamente
 navigator.storage?.persist?.()

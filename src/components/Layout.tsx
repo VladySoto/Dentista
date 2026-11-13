@@ -1,6 +1,7 @@
 import { CalendarDays, ListOrdered, Settings, Users, Wallet } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useConfig } from '../lib/useConfig'
+import { IndicadorNube } from './CuentaNube'
 
 const enlaces = [
   { to: '/', label: 'Sala de espera', corto: 'Espera', icono: ListOrdered },
@@ -19,7 +20,7 @@ export default function Layout() {
           <img src="/icon.svg" alt="" className="h-10 w-10" />
           <div className="min-w-0">
             <p className="truncate font-bold leading-tight">{config.consultorio}</p>
-            {config.dentista && <p className="truncate text-xs text-slate-500">{config.dentista}</p>}
+            <p className="flex items-center gap-1.5 truncate text-xs text-slate-500"><IndicadorNube />{config.dentista || 'Nube'}</p>
           </div>
         </div>
         <nav className="space-y-1">
@@ -40,7 +41,7 @@ export default function Layout() {
         {enlaces.map(({ to, corto, icono: I }) => (
           <NavLink key={to} to={to} end={to === '/'}
             className={({ isActive }) => `flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${isActive ? 'text-teal-600' : 'text-slate-500'}`}>
-            <I size={22} /> {corto}
+            <span className="relative"><I size={22} />{to === '/ajustes' && <span className="absolute -right-1 -top-0.5 flex"><IndicadorNube /></span>}</span> {corto}
           </NavLink>
         ))}
       </nav>

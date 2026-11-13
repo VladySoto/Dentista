@@ -129,7 +129,13 @@ export const db = new Dexie('consultorio-dental') as Dexie & {
   pagos: EntityTable<Pago, 'id'>
   tratamientos: EntityTable<Tratamiento, 'id'>
   config: EntityTable<Config, 'id'>
+  /** Cambios locales que faltan subir a la nube. */
+  pendientes: EntityTable<Pendiente, 'tabla'>
+  /** Datos internos de la sincronización (no se sincronizan). */
+  meta: EntityTable<{ clave: string; valor: string }, 'clave'>
 }
+
+export interface Pendiente { tabla: string; id: string; ts: number }
 
 db.version(1).stores({
   pacientes: '++id, nombre, documento, telefono, creado',
@@ -142,6 +148,11 @@ db.version(2).stores({
   pagos: '++id, pacienteId, fecha',
   tratamientos: '++id, nombre',
   config: 'id',
+})
+
+db.version(3).stores({
+  pendientes: '[tabla+id]',
+  meta: 'clave',
 })
 
 // Primera vez: carga configuración y tratamientos de ejemplo
@@ -202,10 +213,13 @@ const TABLAS = ['pacientes', 'turnos', 'citas', 'consultas', 'pagos', 'tratamien
 
 export async function importarRespaldo(data: Partial<Awaited<ReturnType<typeof exportarRespaldo>>> & { version?: number }) {
   if (!data || (data.version !== 1 && data.version !== 2) || !Array.isArray(data.pacientes)) throw new Error('Archivo de respaldo no válido')
-  await db.transaction('rw', TABLAS.map((t) => db[t]), async () => {
+  await db.transaction('rw', [...TABLAS.map((t) => db[t]), db.pendientes], async () => {
     for (const t of TABLAS) {
       const filas = data[t]
       if (!filas && (t === 'tratamientos' || t === 'config')) continue // respaldo antiguo: conserva lo actual
+      // Lo que se borra aquí también debe borrarse en la nube
+      const ids = (await db[t].toCollection().primaryKeys()) as (string | number)[]
+      await db.pendientes.bulkPut(ids.map((id) => ({ tabla: t, id: String(id), ts: Date.now() })))
       await db[t].clear()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (filas?.length) await (db[t] as any).bulkAdd(filas)

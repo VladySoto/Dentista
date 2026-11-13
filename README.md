@@ -21,8 +21,16 @@ Pensada para un dentista que trabaja solo: la app le ahorra pasos entre paciente
 - **Respaldo**: exportar/importar todos los datos en JSON.
 - Funciona sin internet y se instala en celular o PC.
 
+- **Nube (opcional)**: con una cuenta, los datos se sincronizan entre celular, PC y tablet. Funciona sin internet y sube los cambios después.
+
 ## Tecnologías
-React 18 + TypeScript, Vite, Tailwind CSS, Dexie (IndexedDB), vite-plugin-pwa.
+React 18 + TypeScript, Vite, Tailwind CSS, Dexie (IndexedDB), vite-plugin-pwa, Supabase (nube y cuentas), Vercel (publicación).
+
+## Nube (Supabase)
+1. En Supabase → **SQL Editor** → pegar y ejecutar `supabase/schema.sql`.
+2. La URL y la llave *publishable* del proyecto están en `src/lib/supabase.ts`
+   (se pueden cambiar con `VITE_SUPABASE_URL` y `VITE_SUPABASE_KEY`).
+3. Cada usuario solo puede ver sus propios registros (Row Level Security).
 
 ## Uso
 ```bash
@@ -31,4 +39,4 @@ npm run dev      # desarrollo
 npm run build    # producción (carpeta dist/)
 ```
 
-> Los datos se guardan en el navegador del dispositivo. Haz respaldos periódicos desde **Ajustes**.
+> Sin cuenta, los datos se guardan solo en el navegador del dispositivo. Con cuenta, se guardan también en la nube.

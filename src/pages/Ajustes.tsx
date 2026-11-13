@@ -1,8 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Building2, Check, Download, MessageCircle, Plus, ShieldCheck, Smartphone, Stethoscope, Trash2, Upload } from 'lucide-react'
+import { Building2, Check, Cloud, Download, MessageCircle, Plus, ShieldCheck, Smartphone, Stethoscope, Trash2, Upload } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import CuentaNube from '../components/CuentaNube'
 import { Campo, Encabezado } from '../components/ui'
 import { CONFIG_INICIAL, db, exportarRespaldo, hoy, importarRespaldo, rellenar, varsPlantilla, type Config } from '../lib/db'
+import { useSync } from '../lib/sync'
 import { useConfig } from '../lib/useConfig'
 
 export default function Ajustes() {
@@ -10,6 +12,10 @@ export default function Ajustes() {
     <>
       <Encabezado titulo="Ajustes" />
       <div className="space-y-4">
+        <Seccion icono={<Cloud size={20} />} titulo="Cuenta y nube"
+          sub="Con una cuenta, los datos se guardan en la nube y se ven en todos tus dispositivos (celular, PC, tablet). Sin internet sigue funcionando y sube los cambios después.">
+          <CuentaNube />
+        </Seccion>
         <DatosConsultorio />
         <Tratamientos />
         <Plantillas />
@@ -149,6 +155,7 @@ function Plantillas() {
 function Respaldo() {
   const input = useRef<HTMLInputElement>(null)
   const [msg, setMsg] = useState('')
+  const { sesion } = useSync()
 
   async function descargar() {
     const data = await exportarRespaldo()
@@ -161,7 +168,7 @@ function Respaldo() {
 
   async function restaurar(file?: File) {
     if (!file) return
-    if (!confirm('Esto reemplazará TODOS los datos actuales con los del respaldo. ¿Continuar?')) return
+    if (!confirm(`Esto reemplazará TODOS los datos actuales con los del respaldo${sesion ? ', también en la nube y en tus otros dispositivos' : ''}. ¿Continuar?`)) return
     try {
       await importarRespaldo(JSON.parse(await file.text()))
       setMsg('Datos restaurados correctamente.')
@@ -172,7 +179,9 @@ function Respaldo() {
 
   return (
     <Seccion icono={<ShieldCheck size={20} />} titulo="Respaldo de datos"
-      sub="Por ahora los datos se guardan en este dispositivo. Descarga un respaldo cada semana y guárdalo en Drive o en tu correo.">
+      sub={sesion
+        ? 'Tus datos ya están en la nube. Igual puedes descargar una copia de vez en cuando para guardarla en Drive o en tu correo.'
+        : 'Sin cuenta, los datos se guardan solo en este dispositivo. Descarga un respaldo cada semana y guárdalo en Drive o en tu correo.'}>
       <div className="flex flex-wrap gap-2">
         <button className="btn-primary" onClick={descargar}><Download size={18} /> Descargar respaldo</button>
         <button className="btn-soft" onClick={() => input.current?.click()}><Upload size={18} /> Restaurar</button>
