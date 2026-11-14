@@ -111,7 +111,7 @@ export default function Citas() {
 
       <Modal abierto={modal} onCerrar={() => setModal(false)} titulo="Nueva cita">
         {!pacienteId ? <PacienteSelector onElegir={setPacienteId} /> : (
-          <div className="space-y-4">
+          <div className="paso space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <Campo label="Fecha"><input className="input" type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} /></Campo>
               <Campo label="Hora"><input className="input" type="time" value={form.hora} onChange={(e) => setForm({ ...form, hora: e.target.value })} /></Campo>

@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { dinero } from '../lib/format'
 import { iniciales } from '../lib/format'
 
 export function Modal({ abierto, onCerrar, titulo, children }: {
@@ -12,9 +13,19 @@ export function Modal({ abierto, onCerrar, titulo, children }: {
     document.body.style.overflow = 'hidden'
     return () => { document.removeEventListener('keydown', fn); document.body.style.overflow = '' }
   }, [abierto, onCerrar])
-  if (!abierto) return null
+  // Al cerrar se mantiene montado un instante, con el último contenido, para animar la salida
+  const [montado, setMontado] = useState(abierto)
+  const ultimo = useRef({ titulo, children })
+  if (abierto) ultimo.current = { titulo, children }
+  useEffect(() => {
+    if (abierto) { setMontado(true); return }
+    const t = setTimeout(() => setMontado(false), 200)
+    return () => clearTimeout(t)
+  }, [abierto])
+  if (!abierto && !montado) return null
+  if (!abierto) ({ titulo, children } = ultimo.current)
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
+    <div className={`fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4 ${abierto ? '' : 'modal-cerrando'}`}>
       <div className="modal-fondo absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onCerrar} />
       <div className="modal-panel relative flex max-h-[92vh] w-full flex-col rounded-t-3xl bg-white shadow-2xl sm:max-w-lg sm:rounded-3xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
@@ -61,4 +72,83 @@ export function Encabezado({ titulo, sub, accion }: { titulo: string; sub?: stri
       {accion}
     </div>
   )
+}
+
+/** Selector de pestañas con fondo blanco que se desliza hasta la opción elegida. */
+export function Segmentado<T extends string>({ opciones, valor, onCambiar, className = 'bg-slate-200/60' }: {
+  opciones: readonly (readonly [T, string])[]; valor: T; onCambiar: (v: T) => void; className?: string
+}) {
+  const i = Math.max(0, opciones.findIndex(([k]) => k === valor))
+  return (
+    <div className={`relative grid rounded-xl p-1 ${className}`} style={{ gridTemplateColumns: `repeat(${opciones.length}, minmax(0, 1fr))` }}>
+      <span aria-hidden className="segmento-pildora absolute inset-y-1 left-1 rounded-lg bg-white shadow-sm"
+        style={{ width: `calc((100% - 0.5rem) / ${opciones.length})`, transform: `translateX(${i * 100}%)` }} />
+      {opciones.map(([k, l]) => (
+        <button key={k} type="button" onClick={() => onCambiar(k)}
+          className={`relative rounded-lg py-2 text-sm font-semibold transition-colors ${valor === k ? 'text-teal-700' : 'text-slate-600'}`}>{l}</button>
+      ))}
+    </div>
+  )
+}
+
+const sinMovimiento = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
+
+/** Monto que cuenta desde el valor anterior hasta el nuevo. */
+export function Conteo({ valor }: { valor: number }) {
+  const [n, setN] = useState(0)
+  const desde = useRef(0)
+  useEffect(() => {
+    if (sinMovimiento()) { desde.current = valor; setN(valor); return }
+    const a = desde.current, t0 = performance.now()
+    let raf = 0
+    const paso = (t: number) => {
+      const k = Math.min(1, (t - t0) / 600)
+      const v = a + (valor - a) * (1 - Math.pow(1 - k, 3))
+      desde.current = v
+      setN(k === 1 ? valor : v)
+      if (k < 1) raf = requestAnimationFrame(paso)
+    }
+    raf = requestAnimationFrame(paso)
+    return () => cancelAnimationFrame(raf)
+  }, [valor])
+  return <>{dinero(n === valor ? valor : Math.round(n))}</>
+}
+
+/**
+ * Anima una lista: cuando un elemento sale, se desliza hacia fuera y los demás
+ * se mueven suavemente a su nuevo lugar. Se usa como ref del contenedor.
+ */
+export function useListaAnimada<T extends HTMLElement>() {
+  const ref = useRef<T>(null)
+  const previo = useRef(new Map<HTMLElement, { x: number; y: number; w: number }>())
+  useLayoutEffect(() => {
+    const cont = ref.current
+    const antes = previo.current
+    const ahora = new Map<HTMLElement, { x: number; y: number; w: number }>()
+    if (cont) {
+      const animar = !sinMovimiento()
+      for (const el of Array.from(cont.children) as HTMLElement[]) {
+        if (el.dataset.fantasma) continue
+        const pos = { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth }
+        ahora.set(el, pos)
+        const a = antes.get(el)
+        if (animar && a && (a.x !== pos.x || a.y !== pos.y)) {
+          el.animate([{ transform: `translate(${a.x - pos.x}px, ${a.y - pos.y}px)` }, { transform: 'none' }],
+            { duration: 300, easing: 'cubic-bezier(.22, 1, .36, 1)' })
+        }
+      }
+      if (animar) for (const [el, a] of antes) {
+        if (el.isConnected) continue
+        const f = el.cloneNode(true) as HTMLElement
+        f.dataset.fantasma = '1'
+        f.setAttribute('aria-hidden', 'true')
+        Object.assign(f.style, { position: 'absolute', left: `${a.x}px`, top: `${a.y}px`, width: `${a.w}px`, margin: '0', pointerEvents: 'none', animation: 'none' })
+        cont.appendChild(f)
+        f.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(32px) scale(.97)' }],
+          { duration: 240, easing: 'ease-in', fill: 'forwards' }).onfinish = () => f.remove()
+      }
+    }
+    previo.current = ahora
+  })
+  return ref
 }

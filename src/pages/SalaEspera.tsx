@@ -5,7 +5,7 @@ import {
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import PacienteSelector from '../components/PacienteSelector'
-import { Encabezado, Modal, Vacio } from '../components/ui'
+import { Conteo, Encabezado, Modal, useListaAnimada, Vacio } from '../components/ui'
 import { db, hoy, llamarSiguiente, registrarLlegada, type Paciente, type Turno } from '../lib/db'
 import { dinero, duracion, fechaLarga, hora, minutosDesde } from '../lib/format'
 import { useAhora } from '../lib/useAhora'
@@ -21,6 +21,8 @@ export default function SalaEspera() {
   const [ticket, setTicket] = useState<number | null>(null)
   const [aviso, setAviso] = useState<{ numero: number; id: number } | null>(null)
   const [identificar, setIdentificar] = useState<Turno | null>(null)
+  const listaEspera = useListaAnimada<HTMLDivElement>()
+  const listaCitas = useListaAnimada<HTMLDivElement>()
 
   const datos = useLiveQuery(async () => {
     const turnos = await db.turnos.where('fecha').equals(fecha).sortBy('numero')
@@ -113,7 +115,7 @@ export default function SalaEspera() {
       <div className="mb-4 grid grid-cols-3 gap-3">
         <Stat icono={<Users size={18} />} valor={espera.length} label="En espera" />
         <Stat icono={<CheckCircle2 size={18} />} valor={atendidos.length} label="Atendidos" />
-        <Stat icono={<Banknote size={18} />} valor={`Bs ${dinero(cobrado)}`} label="Cobrado hoy" />
+        <Stat icono={<Banknote size={18} />} valor={<>Bs <Conteo valor={cobrado} /></>} label="Cobrado hoy" />
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3">
@@ -130,7 +132,7 @@ export default function SalaEspera() {
       {proximo && atencion.length === 0 && (
         <button onClick={siguiente}
           className="mb-6 flex w-full items-center gap-4 rounded-2xl bg-gradient-to-br from-teal-600 to-cyan-700 p-4 text-left text-white shadow-lg shadow-teal-700/20 transition active:scale-[.99]">
-          <div className="rounded-xl bg-white/20 p-3"><Megaphone size={24} /></div>
+          <div className="rounded-xl bg-white/20 p-3"><Megaphone size={24} className="meneo" /></div>
           <div className="min-w-0 flex-1">
             <p className="text-lg font-bold">Llamar siguiente</p>
             <p className="truncate text-sm text-teal-50">Turno {proximo.numero} · {nombre(proximo)}</p>
@@ -158,7 +160,7 @@ export default function SalaEspera() {
           <Vacio icono={<Users size={28} />} titulo="Nadie en espera"
             texto="Si el paciente tomó una ficha de papel, toca “+1 llegada”. Si quieres anotar su nombre, toca “Registrar llegada”." />
         ) : (
-          <div className="escalonado space-y-2">
+          <div ref={listaEspera} className="escalonado relative space-y-2">
             {espera.map((t, i) => (
               <TurnoCard key={t.id} t={t} p={t.pacienteId ? pacientes.get(t.pacienteId) : undefined} ahora={ahora} siguiente={i === 0} onAbrir={() => abrir(t)}>
                 <button className="btn-ghost p-2.5" onClick={() => cancelar(t)} aria-label={`Quitar turno ${t.numero}`}><X size={18} /></button>
@@ -172,7 +174,7 @@ export default function SalaEspera() {
       {citasPendientes.length > 0 && (
         <section className="mb-6">
           <Titulo>Citas programadas para hoy</Titulo>
-          <div className="escalonado card divide-y divide-slate-100">
+          <div ref={listaCitas} className="escalonado card relative divide-y divide-slate-100 overflow-hidden">
             {citasPendientes.map((c) => (
               <div key={c.id} className="flex items-center gap-3 p-3">
                 <span className="w-14 text-center font-semibold text-teal-700">{c.hora}</span>
@@ -203,7 +205,8 @@ export default function SalaEspera() {
       )}
 
       {aviso && (
-        <div className="fixed inset-x-4 bottom-24 z-40 mx-auto flex max-w-md items-center gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-white shadow-xl md:bottom-6">
+        <div key={aviso.id} className="aviso fixed inset-x-4 bottom-24 z-40 mx-auto flex max-w-md items-center gap-3 overflow-hidden rounded-2xl bg-slate-900 px-4 py-3 text-white shadow-xl md:bottom-6">
+          <span aria-hidden className="aviso-barra absolute inset-x-0 bottom-0 h-0.5 bg-amber-300" />
           <Ticket size={20} className="text-amber-300" />
           <p className="flex-1 text-sm">Turno <b className="text-lg">{aviso.numero}</b> agregado</p>
           <button className="btn px-3 py-1.5 text-amber-300 hover:bg-white/10" onClick={deshacer}><Undo2 size={16} /> Deshacer</button>
@@ -212,15 +215,15 @@ export default function SalaEspera() {
 
       <Modal abierto={modal} onCerrar={cerrar} titulo={ticket ? 'Turno asignado' : elegido ? 'Motivo de la visita' : 'Registrar llegada'}>
         {ticket ? (
-          <div className="py-4 text-center">
+          <div className="paso py-4 text-center">
             <p className="text-sm text-slate-500">Número de turno</p>
-            <p className="my-2 text-7xl font-bold text-teal-600">{ticket}</p>
+            <p className="pop my-2 text-7xl font-bold text-teal-600">{ticket}</p>
             <p className="font-medium">{pacientes.get(elegido!)?.nombre ?? ''}</p>
             <p className="mt-1 text-sm text-slate-500">{espera.length > 1 ? `${espera.length - 1} persona(s) antes` : 'Es el siguiente'}</p>
             <button className="btn-primary mt-6 w-full" onClick={cerrar}>Listo</button>
           </div>
         ) : elegido ? (
-          <div className="space-y-4">
+          <div className="paso space-y-4">
             <div className="flex flex-wrap gap-2">
               {['Dolor', 'Control', 'Limpieza', 'Extracción', 'Curación', 'Ortodoncia', 'Urgencia'].map((m) => (
                 <button key={m} type="button" onClick={() => setMotivo(m)}
@@ -247,7 +250,7 @@ function Stat({ icono, valor, label }: { icono: React.ReactNode; valor: React.Re
   return (
     <div className="card p-3 sm:p-4">
       <div className="mb-1 text-teal-600">{icono}</div>
-      <p className="text-xl font-bold sm:text-2xl">{valor}</p>
+      <p className="text-xl font-bold tabular-nums sm:text-2xl">{typeof valor === 'number' ? <span key={valor} className="salto">{valor}</span> : valor}</p>
       <p className="text-xs text-slate-500">{label}</p>
     </div>
   )
@@ -263,7 +266,7 @@ function TurnoCard({ t, p, ahora, activo, siguiente, onAbrir, children }: {
   const tieneAlerta = !!(p?.alergias || p?.enfermedades)
   return (
     <div className={`card flex items-center gap-3 p-3 ${activo ? 'border-teal-300 bg-teal-50/60 ring-1 ring-teal-200' : siguiente ? 'border-teal-200' : ''}`}>
-      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-lg font-bold ${activo || siguiente ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-lg font-bold ${activo ? 'latido' : ''} ${activo || siguiente ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
         {t.numero}
       </div>
       <button onClick={onAbrir} className="min-w-0 flex-1 text-left">

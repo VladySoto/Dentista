@@ -1,7 +1,7 @@
 import { Cloud, CloudOff, LogOut, RefreshCw } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { cerrarSesion, crearCuenta, iniciarSesion, sincronizar, useSync } from '../lib/sync'
-import { Campo } from './ui'
+import { Campo, Segmentado } from './ui'
 
 export default function CuentaNube() {
   const s = useSync()
@@ -58,12 +58,7 @@ export default function CuentaNube() {
 
   return (
     <form onSubmit={enviar} className="space-y-3">
-      <div className="grid grid-cols-2 rounded-xl bg-slate-100 p-1">
-        {([['entrar', 'Iniciar sesión'], ['crear', 'Crear cuenta']] as const).map(([k, l]) => (
-          <button key={k} type="button" onClick={() => { setModo(k); setMsg(null) }}
-            className={`rounded-lg py-2 text-sm font-semibold ${modo === k ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-600'}`}>{l}</button>
-        ))}
-      </div>
+      <Segmentado className="bg-slate-100" opciones={[['entrar', 'Iniciar sesión'], ['crear', 'Crear cuenta']] as const} valor={modo} onCambiar={(k) => { setModo(k); setMsg(null) }} />
       <Campo label="Correo"><input className="input" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></Campo>
       <Campo label="Contraseña">
         <input className="input" type="password" autoComplete={modo === 'crear' ? 'new-password' : 'current-password'} required minLength={6} value={clave} onChange={(e) => setClave(e.target.value)} />

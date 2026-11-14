@@ -7,7 +7,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import ConsultaForm from '../components/ConsultaForm'
 import Odontograma from '../components/Odontograma'
 import PacienteForm from '../components/PacienteForm'
-import { Avatar, Campo, Modal, Vacio } from '../components/ui'
+import { Avatar, Campo, Modal, Segmentado, Vacio } from '../components/ui'
 import {
   avisoWhatsApp, calcularSaldo, db, enlaceWhatsApp, hoy, llamarSiguiente, varsPlantilla, type Consulta, type Pago,
 } from '../lib/db'
@@ -171,13 +171,9 @@ export default function PacienteDetalle() {
         )
       )}
 
-      <div className="mb-4 grid grid-cols-3 rounded-xl bg-slate-200/60 p-1">
-        {([['historial', 'Historial'], ['odontograma', 'Odontograma'], ['datos', 'Datos']] as const).map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k)}
-            className={`rounded-lg py-2 text-sm font-semibold transition ${tab === k ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-600'}`}>{l}</button>
-        ))}
-      </div>
+      <div className="mb-4"><Segmentado opciones={[['historial', 'Historial'], ['odontograma', 'Odontograma'], ['datos', 'Datos']] as const} valor={tab} onCambiar={setTab} /></div>
 
+      <div key={tab} className="entra">
       {tab === 'historial' && (
         <>
           {!turno && <button className="btn-primary mb-4 w-full sm:w-auto" onClick={() => setModalConsulta({ modo: 'nueva' })}><Plus size={18} /> Nueva consulta</button>}
@@ -239,6 +235,8 @@ export default function PacienteDetalle() {
           <div className="p-4"><button className="btn-danger" onClick={eliminar}><Trash2 size={16} /> Eliminar paciente</button></div>
         </div>
       )}
+
+      </div>
 
       <Modal abierto={editar} onCerrar={() => setEditar(false)} titulo="Editar paciente">
         <PacienteForm inicial={p} onGuardado={() => setEditar(false)} />

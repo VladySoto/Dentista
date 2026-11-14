@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Banknote, CalendarClock, MessageCircle, Receipt, Wallet } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Avatar, Encabezado } from '../components/ui'
+import { Avatar, Conteo, Encabezado, Segmentado } from '../components/ui'
 import { avisoWhatsApp, calcularSaldo, db, hoy, varsPlantilla, type Consulta, type Pago, type Paciente } from '../lib/db'
 import { dinero, fechaCorta, hora } from '../lib/format'
 import { useConfig } from '../lib/useConfig'
@@ -64,22 +64,17 @@ export default function Caja() {
     <>
       <Encabezado titulo="Caja" sub="Ingresos, deudas y controles pendientes" />
 
-      <div className="mb-4 grid grid-cols-2 rounded-xl bg-slate-200/60 p-1">
-        {([['hoy', 'Hoy'], ['mes', 'Este mes']] as const).map(([k, l]) => (
-          <button key={k} onClick={() => setPeriodo(k)}
-            className={`rounded-lg py-2 text-sm font-semibold transition ${periodo === k ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-600'}`}>{l}</button>
-        ))}
-      </div>
+      <div className="mb-4"><Segmentado opciones={[['hoy', 'Hoy'], ['mes', 'Este mes']] as const} valor={periodo} onCambiar={setPeriodo} /></div>
 
       <div className="mb-6 grid grid-cols-2 gap-3">
         <div className="card col-span-2 bg-gradient-to-br from-teal-600 to-cyan-700 p-5 text-white">
           <p className="text-sm text-teal-50">Cobrado {periodo === 'hoy' ? 'hoy' : 'este mes'}</p>
-          <p className="text-3xl font-bold">Bs {dinero(total)}</p>
+          <p className="text-3xl font-bold tabular-nums">Bs <Conteo valor={total} /></p>
           <p className="mt-1 text-sm text-teal-50">{datos.atenciones} consulta(s) registrada(s)</p>
         </div>
         <div className="card p-4">
           <Wallet size={18} className="mb-1 text-rose-500" />
-          <p className="text-xl font-bold">Bs {dinero(porCobrar)}</p>
+          <p className="text-xl font-bold tabular-nums">Bs <Conteo valor={porCobrar} /></p>
           <p className="text-xs text-slate-500">Por cobrar (total)</p>
         </div>
         <div className="card p-4">

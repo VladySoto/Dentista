@@ -26,7 +26,36 @@
 @keyframes aparecer { from { opacity: 0; transform: translateY(8px); } }
 @keyframes rebote { 0% { transform: scale(1); } 40% { transform: scale(1.22) translateY(-2px); } 100% { transform: scale(1); } }
 
+@keyframes fondo-sale { to { opacity: 0; } }
+@keyframes hoja-baja { to { transform: translateY(100%); } }
+@keyframes modal-encoge { to { opacity: 0; transform: translateY(8px) scale(.96); } }
+@keyframes paso-entra { from { opacity: 0; transform: translateX(18px); } }
+@keyframes pop { 0% { opacity: 0; transform: scale(.5); } 60% { opacity: 1; transform: scale(1.12); } 100% { transform: scale(1); } }
+@keyframes salto { 40% { transform: scale(1.18); } }
+@keyframes diente-pop { 0% { transform: scale(.8); } 55% { transform: scale(1.18); } 100% { transform: scale(1); } }
+@keyframes latido { 0% { box-shadow: 0 0 0 0 rgb(20 184 166 / .45); } 70%, 100% { box-shadow: 0 0 0 10px rgb(20 184 166 / 0); } }
+@keyframes meneo { 0%, 14%, 100% { transform: rotate(0); } 3% { transform: rotate(-14deg); } 6% { transform: rotate(12deg); } 9% { transform: rotate(-8deg); } 12% { transform: rotate(5deg); } }
+@keyframes aviso-sube { from { opacity: 0; transform: translateY(24px); } }
+@keyframes barra-vacia { to { transform: scaleX(0); } }
+
 @layer components {
+  .modal-cerrando { pointer-events: none; }
+  .modal-cerrando .modal-fondo { animation: fondo-sale .2s ease-in forwards; }
+  .modal-cerrando .modal-panel { animation: hoja-baja .2s ease-in forwards; }
+  @media (min-width: 640px) {
+    .modal-cerrando .modal-panel { animation: modal-encoge .18s ease-in forwards; }
+  }
+  .paso { animation: paso-entra .26s cubic-bezier(.22, 1, .36, 1) backwards; }
+  .entra { animation: aparecer .26s cubic-bezier(.22, 1, .36, 1) backwards; }
+  .pop { animation: pop .45s cubic-bezier(.22, 1, .36, 1) backwards; }
+  .salto { display: inline-block; animation: salto .3s ease-out; }
+  .diente-pop { animation: diente-pop .3s ease-out; }
+  .latido { animation: latido 1.8s ease-out infinite; }
+  .meneo { transform-origin: 30% 70%; animation: meneo 4s ease-in-out infinite; }
+  .aviso { animation: aviso-sube .3s cubic-bezier(.22, 1, .36, 1) backwards; }
+  .aviso-barra { transform-origin: left; animation: barra-vacia 5s linear forwards; }
+  .segmento-pildora { transition: transform .28s cubic-bezier(.22, 1, .36, 1); }
+
   .modal-fondo { animation: fondo-entra .2s ease-out backwards; }
   .modal-panel { animation: hoja-sube .32s cubic-bezier(.22, 1, .36, 1) backwards; }
   @media (min-width: 640px) {
@@ -49,6 +78,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .modal-fondo, .modal-panel, .escalonado > *, .rebote { animation: none; }
-  .nav-pildora { transition: none; }
+  .modal-fondo, .modal-panel, .escalonado > *, .rebote, .paso, .entra, .pop, .salto, .diente-pop, .latido, .meneo, .aviso { animation: none; }
+  .modal-cerrando .modal-fondo, .modal-cerrando .modal-panel { animation: none; opacity: 0; }
+  .nav-pildora, .segmento-pildora { transition: none; }
 }

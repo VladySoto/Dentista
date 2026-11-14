@@ -20,6 +20,7 @@ export default function Odontograma({ dientes, onCambiar }: {
   dientes: Record<number, EstadoDiente>; onCambiar: (d: Record<number, EstadoDiente>) => void
 }) {
   const [herramienta, setHerramienta] = useState<EstadoDiente>('caries')
+  const [ultimo, setUltimo] = useState({ n: 0, c: 0 })
 
   const marcar = (n: number) => {
     const actual = dientes[n] ?? 'sano'
@@ -27,6 +28,7 @@ export default function Odontograma({ dientes, onCambiar }: {
     if (actual === herramienta) delete nuevo[n]
     else nuevo[n] = herramienta
     onCambiar(nuevo)
+    setUltimo((u) => ({ n, c: u.c + 1 }))
   }
 
   const fila = (nums: number[], arriba: boolean) => (
@@ -38,7 +40,8 @@ export default function Odontograma({ dientes, onCambiar }: {
           <button key={n} type="button" onClick={() => marcar(n)} aria-label={`Diente ${n}`}
             className="flex flex-col items-center gap-0.5">
             {arriba && <span className="text-[9px] text-slate-400 sm:text-[10px]">{n}</span>}
-            <span className={`flex aspect-[3/4] w-full items-center justify-center border-2 text-[10px] font-bold transition active:scale-90 ${arriba ? 'rounded-b-[45%] rounded-t-md' : 'rounded-t-[45%] rounded-b-md'} ${e.color}`}>
+            <span key={ultimo.n === n ? ultimo.c : 0}
+              className={`flex aspect-[3/4] w-full items-center justify-center border-2 text-[10px] font-bold transition duration-200 hover:-translate-y-0.5 active:scale-90 ${ultimo.n === n ? 'diente-pop' : ''} ${arriba ? 'rounded-b-[45%] rounded-t-md' : 'rounded-t-[45%] rounded-b-md'} ${e.color}`}>
               {e.marca}
             </span>
             {!arriba && <span className="text-[9px] text-slate-400 sm:text-[10px]">{n}</span>}
@@ -57,7 +60,7 @@ export default function Odontograma({ dientes, onCambiar }: {
         {(Object.keys(ESTADOS) as EstadoDiente[]).filter((k) => k !== 'sano').map((k) => (
           <button key={k} type="button" onClick={() => setHerramienta(k)}
             className={`chip border py-1 transition ${herramienta === k ? 'ring-2 ring-teal-500 ring-offset-1' : ''} ${ESTADOS[k].color}`}>
-            {ESTADOS[k].label}{conteo[k] ? ` · ${conteo[k]}` : ''}
+            {ESTADOS[k].label}{conteo[k] ? <> · <span key={conteo[k]} className="salto">{conteo[k]}</span></> : ''}
           </button>
         ))}
       </div>
