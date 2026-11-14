@@ -24,7 +24,7 @@ create or replace function public.registros_tocar()
 returns trigger language plpgsql as $$
 begin
   new.actualizado := clock_timestamp();
-  new.user_id := auth.uid();
+  new.user_id := coalesce(auth.uid(), new.user_id);
   return new;
 end $$;
 
@@ -55,3 +55,5 @@ begin
     alter publication supabase_realtime add table public.registros;
   end if;
 end $$;
+
+-- Turnos por QR: ver 02-turnos-qr.sql

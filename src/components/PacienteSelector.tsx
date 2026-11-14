@@ -1,15 +1,19 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Search, UserPlus } from 'lucide-react'
+import { Search, Smartphone, UserPlus } from 'lucide-react'
 import { useState } from 'react'
-import { db } from '../lib/db'
+import { db, type Paciente } from '../lib/db'
 import { normalizar } from '../lib/format'
 import PacienteForm from './PacienteForm'
 import { Avatar } from './ui'
 
 /** Busca un paciente existente o crea uno nuevo al vuelo. */
-export default function PacienteSelector({ onElegir }: { onElegir: (id: number) => void }) {
+export default function PacienteSelector({ onElegir, sugerido }: {
+  onElegir: (id: number) => void
+  /** Datos que el paciente escribió al tomar turno por QR: permite registrarlo con un toque. */
+  sugerido?: Partial<Paciente>
+}) {
   const [q, setQ] = useState('')
-  const [nuevo, setNuevo] = useState(false)
+  const [nuevo, setNuevo] = useState<Partial<Paciente> | null>(null)
   const resultados = useLiveQuery(async () => {
     const t = normalizar(q.trim())
     const todos = await db.pacientes.orderBy('nombre').toArray()
@@ -20,13 +24,26 @@ export default function PacienteSelector({ onElegir }: { onElegir: (id: number) 
 
   if (nuevo) return (
     <div>
-      <button className="btn-ghost -ml-2 mb-2 px-2 py-1 text-xs" onClick={() => setNuevo(false)}>← Volver a buscar</button>
-      <PacienteForm nombreInicial={q} onGuardado={onElegir} />
+      <button className="btn-ghost -ml-2 mb-2 px-2 py-1 text-xs" onClick={() => setNuevo(null)}>← Volver a buscar</button>
+      <PacienteForm nombreInicial={q} datosIniciales={nuevo} onGuardado={onElegir} />
     </div>
   )
 
   return (
     <div>
+      {sugerido?.nombre && (
+        <button onClick={() => setNuevo(sugerido)}
+          className="mb-4 flex w-full items-center gap-3 rounded-2xl border border-teal-200 bg-teal-50 p-3 text-left hover:bg-teal-100">
+          <Smartphone size={20} className="shrink-0 text-teal-600" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-teal-900">Registrar a “{sugerido.nombre}”</span>
+            <span className="block truncate text-xs text-teal-700">
+              {[sugerido.documento && `CI ${sugerido.documento}`, sugerido.telefono].filter(Boolean).join(' · ') || 'Datos que escribió al tomar turno'}
+            </span>
+          </span>
+          <UserPlus size={18} className="text-teal-600" />
+        </button>
+      )}
       <div className="relative">
         <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
         <input className="input pl-10" placeholder="Nombre, CI o teléfono…" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
@@ -43,7 +60,7 @@ export default function PacienteSelector({ onElegir }: { onElegir: (id: number) 
         ))}
         {resultados?.length === 0 && <p className="py-4 text-center text-sm text-slate-500">No se encontró “{q}”.</p>}
       </div>
-      <button className="btn-soft mt-3 w-full" onClick={() => setNuevo(true)}><UserPlus size={18} /> Paciente nuevo</button>
+      <button className="btn-soft mt-3 w-full" onClick={() => setNuevo({})}><UserPlus size={18} /> Paciente nuevo</button>
     </div>
   )
 }

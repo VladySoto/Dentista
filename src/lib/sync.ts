@@ -38,9 +38,15 @@ export function useSync() {
 
 // ---------------------------------------------------------------- registro de cambios locales
 
-/** Ids únicos entre dispositivos (milisegundos + azar), siguen siendo números. */
+/**
+ * Ids únicos entre dispositivos (milisegundos + azar), siguen siendo números.
+ * Dentro del mismo dispositivo siempre crecen, así no se repiten aunque se creen
+ * muchos registros en el mismo milisegundo.
+ */
+let ultimoId = 0
 function nuevoId() {
-  return Date.now() * 1000 + Math.floor(Math.random() * 1000)
+  ultimoId = Math.max(Date.now() * 1000 + Math.floor(Math.random() * 1000), ultimoId + 1)
+  return ultimoId
 }
 
 const esRemota = (tx?: Transaction | null) => !!(tx as unknown as { __remoto?: boolean } | null)?.__remoto

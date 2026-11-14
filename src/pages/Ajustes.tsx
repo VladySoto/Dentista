@@ -1,7 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Building2, Check, Cloud, Download, MessageCircle, Plus, ShieldCheck, Smartphone, Stethoscope, Trash2, Upload } from 'lucide-react'
+import { Building2, Check, Cloud, Download, QrCode, MessageCircle, Plus, ShieldCheck, Smartphone, Stethoscope, Trash2, Upload } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import CuentaNube from '../components/CuentaNube'
+import TurnosQR from '../components/TurnosQR'
 import { Campo, Encabezado } from '../components/ui'
 import { CONFIG_INICIAL, db, exportarRespaldo, hoy, importarRespaldo, rellenar, varsPlantilla, type Config } from '../lib/db'
 import { useSync } from '../lib/sync'
@@ -15,6 +16,9 @@ export default function Ajustes() {
         <Seccion icono={<Cloud size={20} />} titulo="Cuenta y nube"
           sub="Con una cuenta, los datos se guardan en la nube y se ven en todos tus dispositivos (celular, PC, tablet). Sin internet sigue funcionando y sube los cambios después.">
           <CuentaNube />
+        </Seccion>
+        <Seccion icono={<QrCode size={20} />} titulo="Turnos por QR">
+          <TurnosQR />
         </Seccion>
         <DatosConsultorio />
         <Tratamientos />

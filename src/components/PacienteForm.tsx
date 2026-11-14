@@ -2,10 +2,10 @@ import { useState, type FormEvent } from 'react'
 import { db, type Paciente } from '../lib/db'
 import { Campo } from './ui'
 
-export default function PacienteForm({ inicial, nombreInicial = '', onGuardado }: {
-  inicial?: Paciente; nombreInicial?: string; onGuardado: (id: number) => void
+export default function PacienteForm({ inicial, nombreInicial = '', datosIniciales, onGuardado }: {
+  inicial?: Paciente; nombreInicial?: string; datosIniciales?: Partial<Paciente>; onGuardado: (id: number) => void
 }) {
-  const [p, setP] = useState<Paciente>(inicial ?? { nombre: nombreInicial, creado: Date.now(), sexo: '' })
+  const [p, setP] = useState<Paciente>(inicial ?? { nombre: nombreInicial, creado: Date.now(), sexo: '', ...datosIniciales })
   const [guardando, setGuardando] = useState(false)
   const set = (k: keyof Paciente) => (e: { target: { value: string } }) => setP({ ...p, [k]: e.target.value })
 

@@ -5,6 +5,8 @@ import Layout from './components/Layout'
 import './index.css'
 import Ajustes from './pages/Ajustes'
 import Caja from './pages/Caja'
+import Cartel from './pages/Cartel'
+import TomarTurno from './pages/TomarTurno'
 import Citas from './pages/Citas'
 import PacienteDetalle from './pages/PacienteDetalle'
 import Pacientes from './pages/Pacientes'
@@ -20,6 +22,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
       <Routes>
+        <Route path="t/:codigo" element={<TomarTurno />} />
+        <Route path="cartel" element={<Cartel />} />
         <Route element={<Layout />}>
           <Route index element={<SalaEspera />} />
           <Route path="citas" element={<Citas />} />

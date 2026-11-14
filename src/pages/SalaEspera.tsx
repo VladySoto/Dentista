@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import {
-  AlertTriangle, Banknote, CalendarCheck, CheckCircle2, ChevronRight, Megaphone, Play, Ticket, Undo2, UserPlus, UserSearch, Users, X,
+  AlertTriangle, Banknote, CalendarCheck, CheckCircle2, ChevronRight, Megaphone, Play, Smartphone, Ticket, Undo2, UserPlus, UserSearch, Users, X,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -57,7 +57,7 @@ export default function SalaEspera() {
   const atencion = turnos.filter((t) => t.estado === 'atencion')
   const atendidos = turnos.filter((t) => t.estado === 'atendido')
   const citasPendientes = citas.filter((c) => c.estado === 'pendiente' || c.estado === 'confirmada')
-  const nombre = (t: Turno) => (t.pacienteId ? pacientes.get(t.pacienteId)?.nombre : undefined) ?? 'Sin identificar'
+  const nombre = (t: Turno) => (t.pacienteId ? pacientes.get(t.pacienteId)?.nombre : undefined) ?? t.nombreLlegada ?? 'Sin identificar'
 
   function cerrar() { setModal(false); setElegido(null); setMotivo(''); setTicket(null) }
 
@@ -237,7 +237,10 @@ export default function SalaEspera() {
 
       <Modal abierto={!!identificar} onCerrar={() => setIdentificar(null)} titulo={`¿Quién tiene el turno ${identificar?.numero ?? ''}?`}>
         <p className="-mt-1 mb-3 flex items-center gap-2 text-sm text-slate-500"><UserSearch size={16} /> Búscalo por nombre o carnet, o regístralo si es nuevo.</p>
-        {identificar && <PacienteSelector key={identificar.id} onElegir={alIdentificar} />}
+        {identificar && (
+          <PacienteSelector key={identificar.id} onElegir={alIdentificar}
+            sugerido={identificar.nombreLlegada ? { nombre: identificar.nombreLlegada, documento: identificar.documentoLlegada, telefono: identificar.telefonoLlegada } : undefined} />
+        )}
       </Modal>
     </>
   )
@@ -267,11 +270,15 @@ function TurnoCard({ t, p, ahora, activo, siguiente, onAbrir, children }: {
         {t.numero}
       </div>
       <button onClick={onAbrir} className="min-w-0 flex-1 text-left">
-        <p className={`flex items-center gap-1.5 truncate font-semibold ${t.pacienteId ? '' : 'italic text-slate-400'}`}>
-          {t.pacienteId ? p?.nombre ?? '…' : <><Ticket size={15} className="shrink-0 text-amber-500" /> Sin nombre</>}
+        <p className={`flex items-center gap-1.5 truncate font-semibold ${t.pacienteId || t.nombreLlegada ? '' : 'italic text-slate-400'}`}>
+          {t.pacienteId ? p?.nombre ?? '…'
+            : t.nombreLlegada ? t.nombreLlegada
+            : <><Ticket size={15} className="shrink-0 text-amber-500" /> Sin nombre</>}
+          {t.origen === 'qr' && <Smartphone size={14} className="shrink-0 text-sky-500" aria-label="Tomó turno con QR" />}
           {tieneAlerta && <AlertTriangle size={15} className="shrink-0 text-amber-500" />}
         </p>
         <p className="truncate text-xs text-slate-500">
+          {!t.pacienteId && t.nombreLlegada && <b className="font-semibold text-sky-700">Nuevo · </b>}
           {t.motivo && <>{t.motivo} · </>}
           {activo ? `En consultorio hace ${duracion(min)}` : `Llegó ${hora(t.llegada)} · espera ${duracion(min)}`}
         </p>

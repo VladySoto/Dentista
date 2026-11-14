@@ -39,6 +39,12 @@ export interface Turno {
   llegada: number
   inicio?: number
   fin?: number
+  /** 'qr' si el paciente tomó turno desde su celular. */
+  origen?: 'qr'
+  /** Datos que escribió el paciente al tomar turno por QR. */
+  nombreLlegada?: string
+  documentoLlegada?: string
+  telefonoLlegada?: string
 }
 
 export type EstadoCita = 'pendiente' | 'confirmada' | 'llego' | 'cancelada'
@@ -89,6 +95,8 @@ export interface Config {
   direccion: string
   horario: string
   mesesControl: number
+  /** Código secreto del QR de turnos (vacío = turnos por QR desactivados). */
+  codigoQR?: string
   plantillas: { cita: string; control: string; saldo: string }
 }
 
