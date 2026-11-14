@@ -1,5 +1,5 @@
 import { CalendarDays, ListOrdered, Settings, Users, Wallet } from 'lucide-react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useConfig } from '../lib/useConfig'
 import { IndicadorNube } from './CuentaNube'
 
@@ -13,6 +13,8 @@ const enlaces = [
 
 export default function Layout() {
   const config = useConfig()
+  const { pathname } = useLocation()
+  const activo = enlaces.findIndex(({ to }) => (to === '/' ? pathname === '/' : pathname.startsWith(to)))
   return (
     <div className="min-h-screen md:flex">
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-slate-200 bg-white p-4 md:flex">
@@ -23,11 +25,12 @@ export default function Layout() {
             <p className="flex items-center gap-1.5 truncate text-xs text-slate-500"><IndicadorNube />{config.dentista || 'Nube'}</p>
           </div>
         </div>
-        <nav className="space-y-1">
+        <nav className="relative flex flex-col gap-1">
+          {activo >= 0 && <span aria-hidden className="nav-pildora absolute inset-x-0 top-0 h-10 rounded-xl bg-teal-50" style={{ transform: `translateY(${activo * 44}px)` }} />}
           {enlaces.map(({ to, label, icono: I }) => (
             <NavLink key={to} to={to} end={to === '/'}
-              className={({ isActive }) => `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${isActive ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-100'}`}>
-              <I size={19} /> {label}
+              className={({ isActive }) => `relative flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors ${isActive ? 'text-teal-700' : 'text-slate-600 hover:bg-slate-100'}`}>
+              {({ isActive }) => <><I size={19} className={isActive ? 'rebote' : ''} /> {label}</>}
             </NavLink>
           ))}
         </nav>
@@ -38,10 +41,15 @@ export default function Layout() {
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-200 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+        {activo >= 0 && (
+          <span aria-hidden className="nav-pildora pointer-events-none absolute left-0 top-0 flex w-1/5 justify-center" style={{ transform: `translateX(${activo * 100}%)` }}>
+            <span className="h-[3px] w-10 rounded-b-full bg-teal-500" />
+          </span>
+        )}
         {enlaces.map(({ to, corto, icono: I }) => (
           <NavLink key={to} to={to} end={to === '/'}
-            className={({ isActive }) => `flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${isActive ? 'text-teal-600' : 'text-slate-500'}`}>
-            <span className="relative"><I size={22} />{to === '/ajustes' && <span className="absolute -right-1 -top-0.5 flex"><IndicadorNube /></span>}</span> {corto}
+            className={({ isActive }) => `flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition-colors ${isActive ? 'text-teal-600' : 'text-slate-500'}`}>
+            {({ isActive }) => <><span className={`relative ${isActive ? 'rebote' : ''}`}><I size={22} />{to === '/ajustes' && <span className="absolute -right-1 -top-0.5 flex"><IndicadorNube /></span>}</span> {corto}</>}
           </NavLink>
         ))}
       </nav>

@@ -15,8 +15,8 @@ export function Modal({ abierto, onCerrar, titulo, children }: {
   if (!abierto) return null
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onCerrar} />
-      <div className="relative flex max-h-[92vh] w-full flex-col rounded-t-3xl bg-white shadow-2xl sm:max-w-lg sm:rounded-3xl">
+      <div className="modal-fondo absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onCerrar} />
+      <div className="modal-panel relative flex max-h-[92vh] w-full flex-col rounded-t-3xl bg-white shadow-2xl sm:max-w-lg sm:rounded-3xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
           <h2 className="text-lg font-semibold">{titulo}</h2>
           <button className="btn-ghost -mr-2 p-2" onClick={onCerrar} aria-label="Cerrar"><X size={20} /></button>

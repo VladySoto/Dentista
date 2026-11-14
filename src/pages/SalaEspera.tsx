@@ -142,7 +142,7 @@ export default function SalaEspera() {
       {atencion.length > 0 && (
         <section className="mb-6">
           <Titulo>En atención</Titulo>
-          <div className="space-y-2">
+          <div className="escalonado space-y-2">
             {atencion.map((t) => (
               <TurnoCard key={t.id} t={t} p={t.pacienteId ? pacientes.get(t.pacienteId) : undefined} ahora={ahora} activo onAbrir={() => abrir(t)}>
                 <button className="btn-primary" onClick={() => abrir(t)}>{t.pacienteId ? 'Abrir ficha' : 'Identificar'}</button>
@@ -158,7 +158,7 @@ export default function SalaEspera() {
           <Vacio icono={<Users size={28} />} titulo="Nadie en espera"
             texto="Si el paciente tomó una ficha de papel, toca “+1 llegada”. Si quieres anotar su nombre, toca “Registrar llegada”." />
         ) : (
-          <div className="space-y-2">
+          <div className="escalonado space-y-2">
             {espera.map((t, i) => (
               <TurnoCard key={t.id} t={t} p={t.pacienteId ? pacientes.get(t.pacienteId) : undefined} ahora={ahora} siguiente={i === 0} onAbrir={() => abrir(t)}>
                 <button className="btn-ghost p-2.5" onClick={() => cancelar(t)} aria-label={`Quitar turno ${t.numero}`}><X size={18} /></button>
@@ -172,7 +172,7 @@ export default function SalaEspera() {
       {citasPendientes.length > 0 && (
         <section className="mb-6">
           <Titulo>Citas programadas para hoy</Titulo>
-          <div className="card divide-y divide-slate-100">
+          <div className="escalonado card divide-y divide-slate-100">
             {citasPendientes.map((c) => (
               <div key={c.id} className="flex items-center gap-3 p-3">
                 <span className="w-14 text-center font-semibold text-teal-700">{c.hora}</span>
@@ -190,7 +190,7 @@ export default function SalaEspera() {
       {atendidos.length > 0 && (
         <section>
           <Titulo>Atendidos hoy</Titulo>
-          <div className="card divide-y divide-slate-100">
+          <div className="escalonado card divide-y divide-slate-100">
             {atendidos.map((t) => (
               <button key={t.id} onClick={() => abrir(t)} className="flex w-full items-center gap-3 p-3 text-left hover:bg-slate-50">
                 <span className="w-10 text-center text-sm font-bold text-slate-400">#{t.numero}</span>

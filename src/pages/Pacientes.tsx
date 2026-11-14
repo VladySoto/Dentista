@@ -33,7 +33,7 @@ export default function Pacientes() {
           texto={q ? undefined : 'Registra tu primer paciente para empezar su historial clínico.'}
           accion={!q && <button className="btn-primary" onClick={() => setNuevo(true)}><UserPlus size={18} /> Nuevo paciente</button>} />
       ) : (
-        <div className="card divide-y divide-slate-100 overflow-hidden">
+        <div className="escalonado card divide-y divide-slate-100 overflow-hidden">
           {lista?.map((p) => {
             const e = edad(p.fechaNacimiento)
             return (

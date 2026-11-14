@@ -130,7 +130,7 @@ function Seccion({ titulo, icono, children }: { titulo: string; icono: React.Rea
   return (
     <section className="mb-6">
       <h2 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">{icono}{titulo}</h2>
-      <div className="card divide-y divide-slate-100 overflow-hidden">{children}</div>
+      <div className="escalonado card divide-y divide-slate-100 overflow-hidden">{children}</div>
     </section>
   )
 }

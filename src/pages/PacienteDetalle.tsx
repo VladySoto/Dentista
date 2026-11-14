@@ -184,7 +184,7 @@ export default function PacienteDetalle() {
           {historial.length === 0 ? (
             <Vacio icono={<ClipboardList size={28} />} titulo="Sin consultas registradas" texto="Cada atención que registres aparecerá aquí, en orden cronológico." />
           ) : (
-            <ol className="relative space-y-3 border-l-2 border-teal-100 pl-5">
+            <ol className="escalonado relative space-y-3 border-l-2 border-teal-100 pl-5">
               {historial.map((h) => h.tipo === 'pago' ? (
                 <PagoItem key={`p${h.pg.id}`} pg={h.pg} />
               ) : (

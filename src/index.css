@@ -18,3 +18,37 @@
   .label { @apply mb-1.5 block text-sm font-medium text-slate-600; }
   .chip { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold; }
 }
+
+/* ---------- Animaciones ---------- */
+@keyframes fondo-entra { from { opacity: 0; } }
+@keyframes hoja-sube { from { transform: translateY(100%); } }
+@keyframes modal-zoom { from { opacity: 0; transform: translateY(8px) scale(.96); } }
+@keyframes aparecer { from { opacity: 0; transform: translateY(8px); } }
+@keyframes rebote { 0% { transform: scale(1); } 40% { transform: scale(1.22) translateY(-2px); } 100% { transform: scale(1); } }
+
+@layer components {
+  .modal-fondo { animation: fondo-entra .2s ease-out backwards; }
+  .modal-panel { animation: hoja-sube .32s cubic-bezier(.22, 1, .36, 1) backwards; }
+  @media (min-width: 640px) {
+    .modal-panel { animation: modal-zoom .22s cubic-bezier(.22, 1, .36, 1) backwards; }
+  }
+
+  /* Entrada escalonada: cada hijo aparece un poco después del anterior */
+  .escalonado > * { animation: aparecer .32s cubic-bezier(.22, 1, .36, 1) backwards; }
+  .escalonado > *:nth-child(2) { animation-delay: 35ms; }
+  .escalonado > *:nth-child(3) { animation-delay: 70ms; }
+  .escalonado > *:nth-child(4) { animation-delay: 105ms; }
+  .escalonado > *:nth-child(5) { animation-delay: 140ms; }
+  .escalonado > *:nth-child(6) { animation-delay: 175ms; }
+  .escalonado > *:nth-child(7) { animation-delay: 210ms; }
+  .escalonado > *:nth-child(8) { animation-delay: 245ms; }
+  .escalonado > *:nth-child(n+9) { animation-delay: 280ms; }
+
+  .rebote { animation: rebote .35s ease-out; }
+  .nav-pildora { transition: transform .3s cubic-bezier(.22, 1, .36, 1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-fondo, .modal-panel, .escalonado > *, .rebote { animation: none; }
+  .nav-pildora { transition: none; }
+}

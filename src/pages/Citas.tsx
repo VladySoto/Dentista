@@ -82,7 +82,7 @@ export default function Citas() {
       {datos?.citas.length === 0 ? (
         <Vacio icono={<CalendarDays size={28} />} titulo="Sin citas este día" accion={<button className="btn-soft" onClick={abrir}><Plus size={18} /> Agendar cita</button>} />
       ) : (
-        <div className="space-y-2">
+        <div className="escalonado space-y-2">
           {datos?.citas.map((c) => {
             const p = datos.pacientes.get(c.pacienteId)
             const wa = recordatorio(c)
