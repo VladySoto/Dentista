@@ -12,7 +12,7 @@ import { useSyncExternalStore } from 'react'
 import { db, type Pendiente } from './db'
 import { supabase } from './supabase'
 
-const TABLAS = ['pacientes', 'turnos', 'citas', 'consultas', 'pagos', 'tratamientos', 'config'] as const
+const TABLAS = ['pacientes', 'turnos', 'citas', 'consultas', 'pagos', 'tratamientos', 'config', 'archivos', 'documentos', 'medicamentos'] as const
 type NombreTabla = (typeof TABLAS)[number]
 const tabla = (t: NombreTabla) => db[t] as unknown as Table<Record<string, unknown>, number | string>
 const clave = (t: string, id: string) => (t === 'config' ? id : Number(id))
@@ -84,14 +84,14 @@ for (const t of TABLAS) {
 
 /** Ejecuta cambios que vienen de la nube sin volver a anotarlos como pendientes. */
 async function aplicarRemoto(fn: () => Promise<void>) {
-  await db.transaction('rw', [...TABLAS.map(tabla), db.pendientes], async () => {
+  await db.transaction('rw', [...TABLAS.map(tabla), db.pendientes, db.archivosLocal], async () => {
     (Dexie.currentTransaction as unknown as { __remoto: boolean }).__remoto = true
     await fn()
   })
 }
 
 async function contarPendientes() {
-  actualizar({ pendientes: await db.pendientes.count() })
+  actualizar({ pendientes: (await db.pendientes.count()) + (await db.archivosLocal.where('subido').equals(0).count()) })
 }
 
 const meta = {
@@ -136,12 +136,32 @@ async function bajar() {
         if (!TABLAS.includes(r.tabla)) continue
         if (porAnotar.has(`${r.tabla}/${r.id}`) || (await db.pendientes.get({ tabla: r.tabla, id: r.id }))) continue // gana lo local
         const t = tabla(r.tabla as NombreTabla)
-        if (r.borrado || !r.data) await t.delete(clave(r.tabla, r.id))
-        else await t.put(r.data)
+        if (r.borrado || !r.data) {
+          await t.delete(clave(r.tabla, r.id))
+          if (r.tabla === 'archivos') await db.archivosLocal.delete(Number(r.id))
+        } else await t.put(r.data)
       }
     })
     await meta.set('cursor', data[data.length - 1].actualizado)
     if (data.length < 1000) return
+  }
+}
+
+// ---------------------------------------------------------------- imágenes (Supabase Storage)
+
+export const BUCKET = 'archivos'
+export const rutaImagen = (uid: string, id: number) => `${uid}/${id}.jpg`
+export const usuarioActual = () => estado.sesion?.user.id
+
+/** Sube las fotos tomadas en este dispositivo que aún no están en la nube. */
+async function subirImagenes() {
+  const uid = estado.sesion?.user.id
+  if (!uid) return
+  for (const a of await db.archivosLocal.where('subido').equals(0).toArray()) {
+    if (!(await db.archivos.get(a.id))) { await db.archivosLocal.delete(a.id); continue } // se borró antes de subir
+    const { error } = await supabase.storage.from(BUCKET).upload(rutaImagen(uid, a.id), a.blob, { contentType: 'image/jpeg', upsert: true })
+    if (error) throw new Error(`No se pudo subir una foto: ${error.message}`)
+    await db.archivosLocal.update(a.id, { subido: 1 })
   }
 }
 
@@ -160,6 +180,7 @@ export function sincronizar(): Promise<void> {
       try {
         await subir()
         await bajar()
+        await subirImagenes()
         actualizar({ estado: 'ok', ultimo: Date.now() })
       } catch (e) {
         const msg = (e as Error).message ?? String(e)
@@ -204,15 +225,17 @@ async function prepararDispositivo(uid: string, combinar: () => Promise<boolean>
       if (subirLocal) {
         await db.tratamientos.clear()
         await db.config.clear()
-        await db.pendientes.where('tabla').anyOf('tratamientos', 'config').delete()
+        await db.medicamentos.clear()
+        await db.pendientes.where('tabla').anyOf('tratamientos', 'config', 'medicamentos').delete()
         const ahora = Date.now()
-        for (const t of ['pacientes', 'turnos', 'citas', 'consultas', 'pagos'] as const) {
+        for (const t of ['pacientes', 'turnos', 'citas', 'consultas', 'pagos', 'archivos', 'documentos'] as const) {
           const ids = (await tabla(t).toCollection().primaryKeys()) as (string | number)[]
           await db.pendientes.bulkPut(ids.map((id) => ({ tabla: t, id: String(id), ts: ahora })))
         }
       } else {
         for (const t of TABLAS) await tabla(t).clear()
         await db.pendientes.clear()
+        await db.archivosLocal.clear()
       }
     })
   }

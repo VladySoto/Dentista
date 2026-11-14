@@ -1,10 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Building2, Check, Cloud, Download, QrCode, MessageCircle, Plus, ShieldCheck, Smartphone, Stethoscope, Trash2, Upload } from 'lucide-react'
+import { Building2, Check, Cloud, Download, Pill, QrCode, MessageCircle, Plus, ShieldCheck, Smartphone, Stethoscope, Trash2, Upload } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import CuentaNube from '../components/CuentaNube'
 import TurnosQR from '../components/TurnosQR'
 import { Campo, Encabezado } from '../components/ui'
-import { CONFIG_INICIAL, db, exportarRespaldo, hoy, importarRespaldo, rellenar, varsPlantilla, type Config } from '../lib/db'
+import { CONFIG_INICIAL, db, exportarRespaldo, hoy, importarRespaldo, MEDICAMENTOS_EJEMPLO, rellenar, varsPlantilla, type Config } from '../lib/db'
 import { useSync } from '../lib/sync'
 import { useConfig } from '../lib/useConfig'
 
@@ -22,6 +22,7 @@ export default function Ajustes() {
         </Seccion>
         <DatosConsultorio />
         <Tratamientos />
+        <Medicamentos />
         <Plantillas />
         <Respaldo />
         <Seccion icono={<Smartphone size={20} />} titulo="Instalar como app">
@@ -67,7 +68,7 @@ function useFormConfig() {
 
 function DatosConsultorio() {
   const { form, setForm, boton } = useFormConfig()
-  const set = (k: 'consultorio' | 'dentista' | 'telefono' | 'direccion' | 'horario') =>
+  const set = (k: 'consultorio' | 'dentista' | 'matricula' | 'telefono' | 'direccion' | 'horario') =>
     (e: { target: { value: string } }) => setForm({ ...form, [k]: e.target.value })
   return (
     <Seccion icono={<Building2 size={20} />} titulo="Datos del consultorio" sub="Se usan en el encabezado y en los mensajes de WhatsApp.">
@@ -75,6 +76,7 @@ function DatosConsultorio() {
         <div className="grid gap-3 sm:grid-cols-2">
           <Campo label="Nombre del consultorio"><input className="input" value={form.consultorio} onChange={set('consultorio')} /></Campo>
           <Campo label="Dentista"><input className="input" placeholder="Dr./Dra. …" value={form.dentista} onChange={set('dentista')} /></Campo>
+          <Campo label="Matrícula profesional (para recetas)"><input className="input" value={form.matricula ?? ''} onChange={set('matricula')} /></Campo>
           <Campo label="Teléfono"><input className="input" type="tel" value={form.telefono} onChange={set('telefono')} /></Campo>
           <Campo label="Dirección"><input className="input" value={form.direccion} onChange={set('direccion')} /></Campo>
         </div>
@@ -119,6 +121,62 @@ function Tratamientos() {
         <input className="input w-24" placeholder="Bs" type="number" inputMode="decimal" min="0" value={precio} onChange={(e) => setPrecio(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && agregar()} />
         <button className="btn-soft px-3" onClick={agregar} aria-label="Agregar tratamiento"><Plus size={18} /></button>
       </div>
+    </Seccion>
+  )
+}
+
+function Medicamentos() {
+  const lista = useLiveQuery(() => db.medicamentos.orderBy('nombre').toArray(), [])
+  const [nombre, setNombre] = useState('')
+  const [indicacion, setIndicacion] = useState('')
+  const usaEjemplo = lista !== undefined && lista.length === 0
+
+  // La lista de ejemplo se guarda recién al editarla (así no se duplica entre dispositivos)
+  async function asegurarLista() {
+    if ((await db.medicamentos.count()) === 0) await db.medicamentos.bulkAdd(MEDICAMENTOS_EJEMPLO.map((m) => ({ ...m })))
+  }
+  async function agregar() {
+    if (!nombre.trim()) return
+    await asegurarLista()
+    await db.medicamentos.add({ nombre: nombre.trim(), indicacion: indicacion.trim() })
+    setNombre(''); setIndicacion('')
+  }
+
+  return (
+    <Seccion icono={<Pill size={20} />} titulo="Medicamentos frecuentes"
+      sub="Aparecen como botones al hacer una receta. Revisa las dosis: la lista inicial es solo un ejemplo.">
+      {usaEjemplo ? (
+        <div className="space-y-3">
+          <ul className="space-y-1 text-sm text-slate-600">
+            {MEDICAMENTOS_EJEMPLO.map((m) => <li key={m.nombre}><b>{m.nombre}</b> · {m.indicacion}</li>)}
+          </ul>
+          <button className="btn-soft" onClick={asegurarLista}>Editar esta lista</button>
+        </div>
+      ) : (
+        <>
+          <div className="divide-y divide-slate-100 rounded-xl border border-slate-200">
+            {lista?.map((m) => (
+              <div key={m.id} className="flex items-start gap-2 p-2">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <input className="input border-transparent px-2 py-1 font-semibold hover:border-slate-200" defaultValue={m.nombre} aria-label="Medicamento"
+                    onBlur={(e) => e.target.value.trim() && e.target.value !== m.nombre && db.medicamentos.update(m.id!, { nombre: e.target.value.trim() })} />
+                  <input className="input border-transparent px-2 py-1 text-sm text-slate-600 hover:border-slate-200" defaultValue={m.indicacion} aria-label="Indicación"
+                    onBlur={(e) => e.target.value !== m.indicacion && db.medicamentos.update(m.id!, { indicacion: e.target.value.trim() })} />
+                </div>
+                <button className="btn-ghost p-2 text-slate-400 hover:text-rose-600" aria-label={`Eliminar ${m.nombre}`}
+                  onClick={() => confirm(`¿Eliminar “${m.nombre}”?`) && db.medicamentos.delete(m.id!)}><Trash2 size={16} /></button>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 space-y-2">
+            <input className="input" placeholder="Nuevo medicamento (ej: Dexametasona 4 mg)" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+            <div className="flex gap-2">
+              <input className="input flex-1" placeholder="Indicación (dosis, frecuencia, días)" value={indicacion} onChange={(e) => setIndicacion(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && agregar()} />
+              <button className="btn-soft px-3" onClick={agregar} aria-label="Agregar medicamento"><Plus size={18} /></button>
+            </div>
+          </div>
+        </>
+      )}
     </Seccion>
   )
 }

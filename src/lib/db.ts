@@ -81,6 +81,34 @@ export interface Pago {
   nota?: string
 }
 
+export type TipoArchivo = 'foto' | 'radiografia'
+
+/** Foto o radiografía. La imagen completa va en Supabase Storage; aquí van los datos y una miniatura. */
+export interface Archivo {
+  id?: number
+  pacienteId: number
+  fecha: number
+  tipo: TipoArchivo
+  nota?: string
+  ancho: number
+  alto: number
+  bytes: number
+  /** Miniatura JPEG (data URL) para ver la galería sin descargar. */
+  miniatura: string
+}
+
+/** Imagen completa guardada en este dispositivo (pendiente de subir o ya descargada). */
+export interface ArchivoLocal { id: number; blob: Blob; subido: 0 | 1 }
+
+export interface Medicamento { id?: number; nombre: string; indicacion: string }
+
+export interface ItemReceta { nombre: string; indicacion: string }
+export interface ItemPresupuesto { tratamiento: string; pieza?: string; cantidad: number; precio: number }
+
+export type Documento =
+  | { id?: number; pacienteId: number; fecha: number; tipo: 'receta'; medicamentos: ItemReceta[]; indicaciones?: string }
+  | { id?: number; pacienteId: number; fecha: number; tipo: 'presupuesto'; items: ItemPresupuesto[]; descuento?: number; validezDias: number; notas?: string }
+
 export interface Tratamiento {
   id?: number
   nombre: string
@@ -91,6 +119,8 @@ export interface Config {
   id: 'general'
   consultorio: string
   dentista: string
+  /** Matrícula o registro profesional (aparece en las recetas). */
+  matricula?: string
   telefono: string
   direccion: string
   horario: string
@@ -137,6 +167,10 @@ export const db = new Dexie('consultorio-dental') as Dexie & {
   pagos: EntityTable<Pago, 'id'>
   tratamientos: EntityTable<Tratamiento, 'id'>
   config: EntityTable<Config, 'id'>
+  archivos: EntityTable<Archivo, 'id'>
+  archivosLocal: EntityTable<ArchivoLocal, 'id'>
+  documentos: EntityTable<Documento, 'id'>
+  medicamentos: EntityTable<Medicamento, 'id'>
   /** Cambios locales que faltan subir a la nube. */
   pendientes: EntityTable<Pendiente, 'tabla'>
   /** Datos internos de la sincronización (no se sincronizan). */
@@ -162,6 +196,28 @@ db.version(3).stores({
   pendientes: '[tabla+id]',
   meta: 'clave',
 })
+
+db.version(4).stores({
+  archivos: '++id, pacienteId, fecha',
+  archivosLocal: 'id, subido',
+  documentos: '++id, pacienteId, fecha',
+  medicamentos: '++id, nombre',
+})
+
+/**
+ * Lista de ejemplo de medicamentos frecuentes. No se guarda hasta que el dentista
+ * la edite en Ajustes (así no se duplica entre dispositivos). Verificar dosis.
+ */
+export const MEDICAMENTOS_EJEMPLO: Omit<Medicamento, 'id'>[] = [
+  { nombre: 'Amoxicilina 500 mg', indicacion: '1 cápsula cada 8 horas por 7 días' },
+  { nombre: 'Azitromicina 500 mg', indicacion: '1 tableta cada 24 horas por 3 días' },
+  { nombre: 'Metronidazol 500 mg', indicacion: '1 tableta cada 8 horas por 7 días' },
+  { nombre: 'Ibuprofeno 400 mg', indicacion: '1 tableta cada 8 horas por 3 días (después de comer)' },
+  { nombre: 'Paracetamol 500 mg', indicacion: '1 tableta cada 8 horas si hay dolor' },
+  { nombre: 'Ketorolaco 10 mg', indicacion: '1 tableta cada 8 horas por 3 días' },
+  { nombre: 'Nimesulida 100 mg', indicacion: '1 tableta cada 12 horas por 3 días' },
+  { nombre: 'Clorhexidina 0,12 % (enjuague)', indicacion: 'Enjuagar 15 ml por 30 segundos cada 12 horas por 7 días' },
+]
 
 // Primera vez: carga configuración y tratamientos de ejemplo
 db.on('ready', async () => {
@@ -210,21 +266,24 @@ export async function registrarLlegada(pacienteId?: number, motivo?: string) {
 }
 
 export async function exportarRespaldo() {
-  const [pacientes, turnos, citas, consultas, pagos, tratamientos, config] = await Promise.all([
+  const [pacientes, turnos, citas, consultas, pagos, tratamientos, config, archivos, documentos, medicamentos] = await Promise.all([
     db.pacientes.toArray(), db.turnos.toArray(), db.citas.toArray(), db.consultas.toArray(),
     db.pagos.toArray(), db.tratamientos.toArray(), db.config.toArray(),
+    db.archivos.toArray(), db.documentos.toArray(), db.medicamentos.toArray(),
   ])
-  return { version: 2, exportado: new Date().toISOString(), pacientes, turnos, citas, consultas, pagos, tratamientos, config }
+  // Las imágenes completas no van en el respaldo: quedan en la nube (aquí solo sus datos y miniaturas)
+  return { version: 2, exportado: new Date().toISOString(), pacientes, turnos, citas, consultas, pagos, tratamientos, config, archivos, documentos, medicamentos }
 }
 
-const TABLAS = ['pacientes', 'turnos', 'citas', 'consultas', 'pagos', 'tratamientos', 'config'] as const
+const TABLAS = ['pacientes', 'turnos', 'citas', 'consultas', 'pagos', 'tratamientos', 'config', 'archivos', 'documentos', 'medicamentos'] as const
+const OPCIONALES = new Set<string>(['tratamientos', 'config', 'archivos', 'documentos', 'medicamentos'])
 
 export async function importarRespaldo(data: Partial<Awaited<ReturnType<typeof exportarRespaldo>>> & { version?: number }) {
   if (!data || (data.version !== 1 && data.version !== 2) || !Array.isArray(data.pacientes)) throw new Error('Archivo de respaldo no válido')
   await db.transaction('rw', [...TABLAS.map((t) => db[t]), db.pendientes], async () => {
     for (const t of TABLAS) {
       const filas = data[t]
-      if (!filas && (t === 'tratamientos' || t === 'config')) continue // respaldo antiguo: conserva lo actual
+      if (!filas && OPCIONALES.has(t)) continue // respaldo antiguo: conserva lo actual
       // Lo que se borra aquí también debe borrarse en la nube
       const ids = (await db[t].toCollection().primaryKeys()) as (string | number)[]
       await db.pendientes.bulkPut(ids.map((id) => ({ tabla: t, id: String(id), ts: Date.now() })))

@@ -1,10 +1,12 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import {
-  AlertTriangle, ArrowLeft, Banknote, CalendarClock, CalendarDays, UserRound, ClipboardList, MessageCircle, Pencil, Phone, Plus, Stethoscope, Trash2, Wallet,
+  AlertTriangle, ArrowLeft, Banknote, CalendarClock, CalendarDays, FileText, Receipt, UserRound, ClipboardList, MessageCircle, Pencil, Phone, Plus, Stethoscope, Trash2, Wallet,
 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import ConsultaForm from '../components/ConsultaForm'
+import { DocumentoItem, PresupuestoForm, RecetaForm } from '../components/Documentos'
+import Galeria from '../components/Galeria'
 import Odontograma from '../components/Odontograma'
 import PacienteForm from '../components/PacienteForm'
 import { Avatar, Campo, Modal, Vacio } from '../components/ui'
@@ -12,10 +14,11 @@ import {
   avisoWhatsApp, calcularSaldo, db, enlaceWhatsApp, hoy, llamarSiguiente, varsPlantilla, type Consulta, type Pago,
 } from '../lib/db'
 import { dinero, duracion, edad, fechaCorta, fechaLarga, hora, minutosDesde } from '../lib/format'
+import { borrarImagen } from '../lib/archivos'
 import { useAhora } from '../lib/useAhora'
 import { useConfig } from '../lib/useConfig'
 
-type Tab = 'historial' | 'odontograma' | 'datos'
+type Tab = 'historial' | 'fotos' | 'odontograma' | 'datos'
 type ModalConsulta = { modo: 'turno' } | { modo: 'nueva' } | { modo: 'editar'; consulta: Consulta } | null
 
 export default function PacienteDetalle() {
@@ -28,10 +31,13 @@ export default function PacienteDetalle() {
   const [modalConsulta, setModalConsulta] = useState<ModalConsulta>(null)
   const [modalPago, setModalPago] = useState(false)
   const [modalCita, setModalCita] = useState(false)
+  const [modalDoc, setModalDoc] = useState<'receta' | 'presupuesto' | null>(null)
 
   const p = useLiveQuery(() => db.pacientes.get(id), [id])
   const consultas = useLiveQuery(() => db.consultas.where('pacienteId').equals(id).toArray(), [id])
   const pagos = useLiveQuery(() => db.pagos.where('pacienteId').equals(id).toArray(), [id])
+  const documentos = useLiveQuery(() => db.documentos.where('pacienteId').equals(id).toArray(), [id])
+  const numFotos = useLiveQuery(() => db.archivos.where('pacienteId').equals(id).count(), [id])
   const proximaCita = useLiveQuery(async () => {
     const citas = await db.citas.where('pacienteId').equals(id).toArray()
     return citas
@@ -60,6 +66,7 @@ export default function PacienteDetalle() {
   const historial = [
     ...consultas.map((c) => ({ tipo: 'consulta' as const, fecha: c.fecha, c })),
     ...pagos.map((pg) => ({ tipo: 'pago' as const, fecha: pg.fecha, pg })),
+    ...(documentos ?? []).map((d) => ({ tipo: 'documento' as const, fecha: d.fecha, d })),
   ].sort((a, b) => b.fecha - a.fecha)
 
   async function alGuardarConsulta(_: Consulta, siguiente: boolean) {
@@ -79,8 +86,9 @@ export default function PacienteDetalle() {
 
   async function eliminar() {
     if (!confirm(`¿Eliminar a ${p!.nombre} y todo su historial? Esta acción no se puede deshacer.`)) return
-    await db.transaction('rw', [db.pacientes, db.consultas, db.turnos, db.citas, db.pagos], async () => {
-      for (const t of [db.consultas, db.turnos, db.citas, db.pagos]) await t.where('pacienteId').equals(id).delete()
+    for (const a of (await db.archivos.where('pacienteId').equals(id).primaryKeys()) as number[]) await borrarImagen(a)
+    await db.transaction('rw', [db.pacientes, db.consultas, db.turnos, db.citas, db.pagos, db.documentos], async () => {
+      for (const t of [db.consultas, db.turnos, db.citas, db.pagos, db.documentos]) await t.where('pacienteId').equals(id).delete()
       await db.pacientes.delete(id)
     })
     navigate('/pacientes')
@@ -171,22 +179,28 @@ export default function PacienteDetalle() {
         )
       )}
 
-      <div className="mb-4 grid grid-cols-3 rounded-xl bg-slate-200/60 p-1">
-        {([['historial', 'Historial'], ['odontograma', 'Odontograma'], ['datos', 'Datos']] as const).map(([k, l]) => (
+      <div className="mb-4 grid grid-cols-4 rounded-xl bg-slate-200/60 p-1">
+        {([['historial', 'Historial'], ['fotos', `Fotos${numFotos ? ` (${numFotos})` : ''}`], ['odontograma', 'Odontograma'], ['datos', 'Datos']] as const).map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)}
-            className={`rounded-lg py-2 text-sm font-semibold transition ${tab === k ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-600'}`}>{l}</button>
+            className={`truncate rounded-lg px-1 py-2 text-xs font-semibold transition sm:text-sm ${tab === k ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-600'}`}>{l}</button>
         ))}
       </div>
 
       {tab === 'historial' && (
         <>
-          {!turno && <button className="btn-primary mb-4 w-full sm:w-auto" onClick={() => setModalConsulta({ modo: 'nueva' })}><Plus size={18} /> Nueva consulta</button>}
+          <div className="mb-4 flex flex-wrap gap-2">
+            {!turno && <button className="btn-primary flex-1 sm:flex-none" onClick={() => setModalConsulta({ modo: 'nueva' })}><Plus size={18} /> Nueva consulta</button>}
+            <button className="btn-soft flex-1 sm:flex-none" onClick={() => setModalDoc('receta')}><FileText size={18} /> Receta</button>
+            <button className="btn-soft flex-1 sm:flex-none" onClick={() => setModalDoc('presupuesto')}><Receipt size={18} /> Presupuesto</button>
+          </div>
           {historial.length === 0 ? (
             <Vacio icono={<ClipboardList size={28} />} titulo="Sin consultas registradas" texto="Cada atención que registres aparecerá aquí, en orden cronológico." />
           ) : (
             <ol className="relative space-y-3 border-l-2 border-teal-100 pl-5">
               {historial.map((h) => h.tipo === 'pago' ? (
                 <PagoItem key={`p${h.pg.id}`} pg={h.pg} />
+              ) : h.tipo === 'documento' ? (
+                <DocumentoItem key={`d${h.d.id}`} d={h.d} paciente={p} />
               ) : (
                 <li key={`c${h.c.id}`} className="relative">
                   <span className="absolute -left-[27px] top-4 h-3 w-3 rounded-full border-2 border-white bg-teal-500 ring-2 ring-teal-100" />
@@ -217,6 +231,8 @@ export default function PacienteDetalle() {
           )}
         </>
       )}
+
+      {tab === 'fotos' && <Galeria pacienteId={id} />}
 
       {tab === 'odontograma' && (
         <div className="card p-3 sm:p-5">
@@ -260,6 +276,11 @@ export default function PacienteDetalle() {
             if (confirm('¿Eliminar esta consulta?')) { await db.consultas.delete(modalConsulta.consulta.id!); setModalConsulta(null) }
           }}><Trash2 size={16} /> Eliminar consulta</button>
         )}
+      </Modal>
+
+      <Modal abierto={!!modalDoc} onCerrar={() => setModalDoc(null)} titulo={modalDoc === 'receta' ? 'Nueva receta' : 'Nuevo presupuesto'}>
+        {modalDoc === 'receta' && <RecetaForm paciente={p} onListo={() => setModalDoc(null)} />}
+        {modalDoc === 'presupuesto' && <PresupuestoForm paciente={p} onListo={() => setModalDoc(null)} />}
       </Modal>
 
       <Modal abierto={modalCita} onCerrar={() => setModalCita(false)} titulo="Agendar cita">
