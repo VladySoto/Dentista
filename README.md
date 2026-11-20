@@ -24,6 +24,11 @@ Pensada para un dentista que trabaja solo: la app le ahorra pasos entre paciente
 - **Turnos por QR**: el paciente escanea un cartel, escribe su nombre y recibe su número; ve cuántos faltan y recibe aviso cuando le toca. Si da su carnet, se vincula a su ficha.
 - **Fotos y radiografías**: desde la ficha, con la cámara o subiendo imágenes; se comprimen y se guardan en la nube.
 - **Recetas y presupuestos en PDF**: medicamentos frecuentes con dosis, aviso si el paciente es alérgico, tratamientos con precios; se comparten por WhatsApp o se descargan.
+- **Bloqueo con PIN o huella** en cada dispositivo.
+- **Odontograma** adulto, mixto e infantil, por caras del diente y con historial por fecha.
+- **Cobro con QR del banco** y **recibos de pago en PDF** con el monto en letras.
+- **Gastos y ganancia**, **inventario de materiales** con avisos, y **reportes mensuales** con exportación a Excel (CSV).
+- **Copia semanal a Google Drive**: aviso en la sala de espera y guardado con el menú de compartir.
 - **Nube (opcional)**: con una cuenta, los datos se sincronizan entre celular, PC y tablet. Funciona sin internet y sube los cambios después.
 
 ## Tecnologías

@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAlertasInventario } from '../lib/inventario'
 import { useConfig } from '../lib/useConfig'
 import { IndicadorNube } from './CuentaNube'
+import RecordatorioRespaldo from './RecordatorioRespaldo'
 
 const principales = [
   { to: '/', label: 'Sala de espera', corto: 'Espera', icono: ListOrdered },
@@ -50,6 +51,7 @@ export default function Layout() {
       </aside>
 
       <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-6 md:px-8 md:pb-10">
+        {pathname === '/' && <RecordatorioRespaldo />}
         <Outlet />
       </main>
 

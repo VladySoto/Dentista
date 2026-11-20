@@ -6,8 +6,10 @@ import AjustesQRPago from '../components/AjustesQRPago'
 import CuentaNube from '../components/CuentaNube'
 import TurnosQR from '../components/TurnosQR'
 import { Campo, Encabezado } from '../components/ui'
-import { CONFIG_INICIAL, db, exportarRespaldo, hoy, importarRespaldo, MEDICAMENTOS_EJEMPLO, rellenar, varsPlantilla, type Config } from '../lib/db'
+import { CONFIG_INICIAL, db, importarRespaldo, MEDICAMENTOS_EJEMPLO, rellenar, varsPlantilla, type Config } from '../lib/db'
 import { useSync } from '../lib/sync'
+import { fechaCorta, hora } from '../lib/format'
+import { guardarRespaldo, useRespaldo } from '../lib/respaldo'
 import { useConfig } from '../lib/useConfig'
 
 export default function Ajustes() {
@@ -228,14 +230,11 @@ function Respaldo() {
   const input = useRef<HTMLInputElement>(null)
   const [msg, setMsg] = useState('')
   const { sesion } = useSync()
+  const { ultimo } = useRespaldo()
 
-  async function descargar() {
-    const data = await exportarRespaldo()
-    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
-    const a = document.createElement('a')
-    a.href = url; a.download = `respaldo-consultorio-${hoy()}.json`; a.click()
-    URL.revokeObjectURL(url)
-    setMsg('Respaldo descargado.')
+  async function guardar() {
+    const r = await guardarRespaldo()
+    if (r !== 'cancelado') setMsg(r === 'compartido' ? 'Copia guardada.' : 'Copia descargada. Súbela a Google Drive o envíatela por correo.')
   }
 
   async function restaurar(file?: File) {
@@ -252,14 +251,16 @@ function Respaldo() {
   return (
     <Seccion icono={<ShieldCheck size={20} />} titulo="Respaldo de datos"
       sub={sesion
-        ? 'Tus datos ya están en la nube. Igual puedes descargar una copia de vez en cuando para guardarla en Drive o en tu correo.'
-        : 'Sin cuenta, los datos se guardan solo en este dispositivo. Descarga un respaldo cada semana y guárdalo en Drive o en tu correo.'}>
+        ? 'Tus datos ya están en la nube. Además, una copia semanal en Google Drive te protege por si algo falla. La sala de espera te lo recuerda cada 7 días.'
+        : 'Sin cuenta, los datos se guardan solo en este dispositivo. Guarda una copia cada semana en Google Drive: la sala de espera te lo recuerda.'}>
+      <p className="mb-3 text-sm text-slate-600">Última copia en este dispositivo: <b>{ultimo ? `${fechaCorta(ultimo)} ${hora(ultimo)}` : 'nunca'}</b></p>
       <div className="flex flex-wrap gap-2">
-        <button className="btn-primary" onClick={descargar}><Download size={18} /> Descargar respaldo</button>
+        <button className="btn-primary" onClick={guardar}><Download size={18} /> Guardar copia en Drive</button>
         <button className="btn-soft" onClick={() => input.current?.click()}><Upload size={18} /> Restaurar</button>
-        <input ref={input} type="file" accept="application/json" hidden onChange={(e) => { restaurar(e.target.files?.[0]); e.target.value = '' }} />
+        <input ref={input} type="file" accept="application/json,text/plain,.json,.txt" hidden onChange={(e) => { restaurar(e.target.files?.[0]); e.target.value = '' }} />
       </div>
       {msg && <p className="mt-3 text-sm font-medium text-teal-700">{msg}</p>}
+      <p className="mt-3 text-xs text-slate-500">En el celular se abre el menú de compartir: elige <b>Drive</b> y la carpeta. La copia incluye pacientes, historial, citas, caja e inventario. Las fotos completas quedan en la nube (en la copia van sus miniaturas).</p>
     </Seccion>
   )
 }
