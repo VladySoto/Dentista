@@ -3,7 +3,7 @@ import { Banknote, CalendarClock, MessageCircle, Receipt, Wallet } from 'lucide-
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Avatar, Encabezado } from '../components/ui'
-import { avisoWhatsApp, calcularSaldo, db, hoy, varsPlantilla, type Consulta, type Pago, type Paciente } from '../lib/db'
+import { avisoWhatsApp, calcularSaldo, db, hoy, METODOS, varsPlantilla, type MetodoPago, type Consulta, type Pago, type Paciente } from '../lib/db'
 import { dinero, fechaCorta, hora } from '../lib/format'
 import { useConfig } from '../lib/useConfig'
 
@@ -33,9 +33,9 @@ export default function Caja() {
 
     const movimientos = [
       ...consultas.filter((c) => c.fecha >= ini && c.fecha < fin && (c.pagado ?? 0) > 0)
-        .map((c) => ({ fecha: c.fecha, pacienteId: c.pacienteId, concepto: c.tratamiento || c.motivo, monto: c.pagado! })),
+        .map((c) => ({ fecha: c.fecha, pacienteId: c.pacienteId, concepto: c.tratamiento || c.motivo, monto: c.pagado!, metodo: c.metodoPago ?? 'efectivo' as MetodoPago })),
       ...pagos.filter((p) => p.fecha >= ini && p.fecha < fin)
-        .map((p) => ({ fecha: p.fecha, pacienteId: p.pacienteId, concepto: `Abono${p.nota ? ` · ${p.nota}` : ''}`, monto: p.monto })),
+        .map((p) => ({ fecha: p.fecha, pacienteId: p.pacienteId, concepto: `Abono${p.nota ? ` · ${p.nota}` : ''}`, monto: p.monto, metodo: p.metodo ?? 'efectivo' as MetodoPago })),
     ].sort((a, b) => b.fecha - a.fecha)
     const atenciones = consultas.filter((c) => c.fecha >= ini && c.fecha < fin).length
 
@@ -58,6 +58,7 @@ export default function Caja() {
 
   if (!datos) return null
   const total = datos.movimientos.reduce((s, m) => s + m.monto, 0)
+  const porMetodo = datos.movimientos.reduce<Partial<Record<MetodoPago, number>>>((a, m) => ({ ...a, [m.metodo]: (a[m.metodo] ?? 0) + m.monto }), {})
   const porCobrar = datos.deudores.reduce((s, d) => s + d.saldo, 0)
 
   return (
@@ -76,6 +77,13 @@ export default function Caja() {
           <p className="text-sm text-teal-50">Cobrado {periodo === 'hoy' ? 'hoy' : 'este mes'}</p>
           <p className="text-3xl font-bold">Bs {dinero(total)}</p>
           <p className="mt-1 text-sm text-teal-50">{datos.atenciones} consulta(s) registrada(s)</p>
+          {Object.keys(porMetodo).length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {(Object.entries(porMetodo) as [MetodoPago, number][]).map(([k, v]) => (
+                <span key={k} className="chip bg-white/15 text-white">{METODOS[k]} · Bs {dinero(v)}</span>
+              ))}
+            </div>
+          )}
         </div>
         <div className="card p-4">
           <Wallet size={18} className="mb-1 text-rose-500" />

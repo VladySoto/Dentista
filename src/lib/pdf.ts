@@ -1,6 +1,7 @@
 import type { jsPDF } from 'jspdf'
-import type { Config, Documento, Paciente } from './db'
+import { METODOS, type Config, type Documento, type MetodoPago, type Paciente } from './db'
 import { dinero, edad } from './format'
+import { montoEnLetras } from './letras'
 
 const TEAL: [number, number, number] = [13, 148, 136]
 const GRIS: [number, number, number] = [100, 116, 139]
@@ -152,4 +153,47 @@ export async function compartirODescargar(blob: Blob, nombre: string, texto: str
   a.href = url; a.download = nombre; a.click()
   setTimeout(() => URL.revokeObjectURL(url), 10_000)
   return 'descargado'
+}
+
+export type DatosRecibo = {
+  id: number
+  fecha: number
+  monto: number
+  concepto: string
+  metodo?: MetodoPago
+  /** Saldo que queda pendiente después de este pago. */
+  saldo: number
+}
+
+/** Recibo de pago (A6 apaisado) para entregar al paciente. */
+export async function pdfRecibo(r: DatosRecibo, p: Paciente, c: Config): Promise<{ blob: Blob; nombre: string }> {
+  const { jsPDF } = await import('jspdf')
+  const doc = new jsPDF({ format: 'a5', orientation: 'landscape', unit: 'mm' })
+  const m = 14, ancho = 210 - 2 * m
+  let y = encabezado(doc, c, m, ancho, 16)
+  doc.setFont('helvetica', 'bold').setFontSize(16).setTextColor(...NEGRO).text('RECIBO', m, y + 1)
+  doc.setFont('helvetica', 'normal').setFontSize(9).setTextColor(...GRIS)
+  doc.text(`N° ${String(r.id).slice(-6)}  ·  ${fechaTexto(r.fecha)}`, m + ancho, y + 1, { align: 'right' })
+  // Monto destacado
+  doc.setFillColor(240, 253, 250).setDrawColor(...TEAL).setLineWidth(0.4).roundedRect(m + ancho - 52, y + 5, 52, 13, 2, 2, 'FD')
+  doc.setFont('helvetica', 'bold').setFontSize(15).setTextColor(...TEAL).text(`Bs ${dinero(r.monto)}`, m + ancho - 26, y + 13.5, { align: 'center' })
+  y += 11
+  const fila = (etiqueta: string, valor: string, anchoValor = ancho - 60) => {
+    doc.setFont('helvetica', 'bold').setFontSize(10).setTextColor(...NEGRO).text(etiqueta, m, y)
+    const lineas = doc.setFont('helvetica', 'normal').splitTextToSize(valor, anchoValor)
+    doc.text(lineas, m + 34, y)
+    y += 5.5 * lineas.length + 1.5
+  }
+  fila('Recibí de:', p.nombre + (p.documento ? `  (CI ${p.documento})` : ''))
+  fila('La suma de:', montoEnLetras(r.monto).replace(/^./, (x) => x.toUpperCase()), ancho - 34)
+  fila('Por concepto de:', r.concepto, ancho - 34)
+  if (r.metodo) fila('Forma de pago:', METODOS[r.metodo])
+  if (r.saldo > 0) {
+    doc.setFont('helvetica', 'bold').setFontSize(10).setTextColor(190, 18, 60).text(`Saldo pendiente a la fecha: Bs ${dinero(r.saldo)}`, m, y + 1)
+  } else {
+    doc.setFont('helvetica', 'bold').setFontSize(10).setTextColor(...TEAL).text('Sin saldo pendiente. ¡Gracias!', m, y + 1)
+  }
+  firma(doc, c, m, ancho, 148 - 18)
+  const base = p.nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '')
+  return { blob: doc.output('blob'), nombre: `Recibo-${base}-${new Date(r.fecha).toISOString().slice(0, 10)}.pdf` }
 }

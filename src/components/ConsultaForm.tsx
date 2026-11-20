@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react'
 import { db, sumarMeses, type Consulta } from '../lib/db'
 import { dinero } from '../lib/format'
 import { useConfig } from '../lib/useConfig'
+import { BotonCobrarQR, MetodoSelector } from './Cobro'
 import { Campo } from './ui'
 
 export default function ConsultaForm({ pacienteId, inicial, motivoInicial = '', enEspera, onGuardado }: {
@@ -37,7 +38,8 @@ export default function ConsultaForm({ pacienteId, inicial, motivoInicial = '', 
 
   async function guardar(e: FormEvent, siguiente = false) {
     e.preventDefault()
-    const final = { ...c, motivo: c.motivo.trim() || elegidos[0] || 'Consulta' }
+    const pago = (c.pagado ?? 0) > 0
+    const final = { ...c, motivo: c.motivo.trim() || elegidos[0] || 'Consulta', metodoPago: pago ? c.metodoPago ?? 'efectivo' : undefined }
     const id = await db.consultas.put(final)
     onGuardado({ ...final, id }, siguiente)
   }
@@ -83,8 +85,16 @@ export default function ConsultaForm({ pacienteId, inicial, motivoInicial = '', 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button type="button" className="btn-soft px-3 py-1.5 text-xs" onClick={() => setC({ ...c, pagado: c.costo ?? 0 })}>Pagó todo</button>
           <button type="button" className="btn-ghost px-3 py-1.5 text-xs" onClick={() => setC({ ...c, pagado: 0 })}>No pagó</button>
+          {(c.costo ?? 0) > 0 && <BotonCobrarQR monto={(c.pagado ?? 0) > 0 ? c.pagado! : c.costo!}
+            onPagado={() => setC({ ...c, pagado: (c.pagado ?? 0) > 0 ? c.pagado : c.costo, metodoPago: 'qr' })} />}
           {debe > 0 && <span className="ml-auto text-sm font-semibold text-rose-600">Queda debiendo Bs {dinero(debe)}</span>}
         </div>
+        {(c.pagado ?? 0) > 0 && (
+          <div className="mt-3">
+            <span className="label">Forma de pago</span>
+            <MetodoSelector valor={c.metodoPago} onChange={(m) => setC({ ...c, metodoPago: m })} />
+          </div>
+        )}
       </div>
 
       <label className="flex items-center gap-3 rounded-2xl border border-slate-200 p-3">

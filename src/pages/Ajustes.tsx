@@ -1,7 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Building2, Check, Cloud, Download, Lock, Pill, QrCode, MessageCircle, Plus, ShieldCheck, Smartphone, Stethoscope, Trash2, Upload } from 'lucide-react'
+import { Building2, Check, Cloud, Download, Landmark, Lock, Pill, QrCode, MessageCircle, Plus, ShieldCheck, Smartphone, Stethoscope, Trash2, Upload } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import AjustesBloqueo from '../components/AjustesBloqueo'
+import AjustesQRPago from '../components/AjustesQRPago'
 import CuentaNube from '../components/CuentaNube'
 import TurnosQR from '../components/TurnosQR'
 import { Campo, Encabezado } from '../components/ui'
@@ -26,6 +27,10 @@ export default function Ajustes() {
           <TurnosQR />
         </Seccion>
         <DatosConsultorio />
+        <Seccion icono={<Landmark size={20} />} titulo="Cobro con QR"
+          sub="Muestra el QR de tu banco en pantalla para que el paciente pague desde su celular.">
+          <AjustesQRPago />
+        </Seccion>
         <Tratamientos />
         <Medicamentos />
         <Plantillas />

@@ -75,6 +75,9 @@ export interface Cita {
   estado: EstadoCita
 }
 
+export type MetodoPago = 'efectivo' | 'qr' | 'transferencia' | 'tarjeta'
+export const METODOS: Record<MetodoPago, string> = { efectivo: 'Efectivo', qr: 'QR', transferencia: 'Transferencia', tarjeta: 'Tarjeta' }
+
 export interface Consulta {
   id?: number
   pacienteId: number
@@ -85,6 +88,7 @@ export interface Consulta {
   piezas?: string
   costo?: number
   pagado?: number
+  metodoPago?: MetodoPago
   notas?: string
   proximoControl?: string // YYYY-MM-DD
 }
@@ -95,6 +99,7 @@ export interface Pago {
   pacienteId: number
   fecha: number
   monto: number
+  metodo?: MetodoPago
   nota?: string
 }
 
@@ -142,6 +147,9 @@ export interface Config {
   direccion: string
   horario: string
   mesesControl: number
+  /** Imagen del QR de cobro del banco (data URL) y a nombre de quién está. */
+  qrPago?: string
+  qrPagoTitular?: string
   /** Código secreto del QR de turnos (vacío = turnos por QR desactivados). */
   codigoQR?: string
   plantillas: { cita: string; control: string; saldo: string }

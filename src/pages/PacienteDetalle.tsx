@@ -4,6 +4,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { BotonCobrarQR, BotonRecibo, MetodoSelector } from '../components/Cobro'
 import ConsultaForm from '../components/ConsultaForm'
 import { DocumentoItem, PresupuestoForm, RecetaForm } from '../components/Documentos'
 import Galeria from '../components/Galeria'
@@ -11,7 +12,7 @@ import Odontograma from '../components/Odontograma'
 import PacienteForm from '../components/PacienteForm'
 import { Avatar, Campo, Modal, Vacio } from '../components/ui'
 import {
-  avisoWhatsApp, calcularSaldo, db, enlaceWhatsApp, hoy, llamarSiguiente, varsPlantilla, type Consulta, type Pago,
+  avisoWhatsApp, calcularSaldo, db, enlaceWhatsApp, hoy, llamarSiguiente, METODOS, varsPlantilla, type Consulta, type MetodoPago, type Paciente, type Pago,
 } from '../lib/db'
 import { dinero, duracion, edad, fechaCorta, fechaLarga, hora, minutosDesde } from '../lib/format'
 import { borrarImagen } from '../lib/archivos'
@@ -198,13 +199,14 @@ export default function PacienteDetalle() {
           ) : (
             <ol className="relative space-y-3 border-l-2 border-teal-100 pl-5">
               {historial.map((h) => h.tipo === 'pago' ? (
-                <PagoItem key={`p${h.pg.id}`} pg={h.pg} />
+                <PagoItem key={`p${h.pg.id}`} pg={h.pg} paciente={p} />
               ) : h.tipo === 'documento' ? (
                 <DocumentoItem key={`d${h.d.id}`} d={h.d} paciente={p} />
               ) : (
                 <li key={`c${h.c.id}`} className="relative">
                   <span className="absolute -left-[27px] top-4 h-3 w-3 rounded-full border-2 border-white bg-teal-500 ring-2 ring-teal-100" />
-                  <button onClick={() => setModalConsulta({ modo: 'editar', consulta: h.c })} className="card w-full p-4 text-left transition hover:border-teal-200">
+                  <div className="card transition hover:border-teal-200">
+                  <button onClick={() => setModalConsulta({ modo: 'editar', consulta: h.c })} className="w-full p-4 text-left">
                     <div className="flex items-start justify-between gap-2">
                       <p className="font-semibold">{h.c.motivo}</p>
                       <span className="shrink-0 text-xs text-slate-500">{fechaCorta(h.c.fecha)} · {hora(h.c.fecha)}</span>
@@ -221,10 +223,17 @@ export default function PacienteDetalle() {
                     {h.c.costo !== undefined && (
                       <p className="mt-2 text-xs text-slate-500">
                         Bs {dinero(h.c.costo)} · pagó Bs {dinero(h.c.pagado)}
+                        {h.c.metodoPago && (h.c.pagado ?? 0) > 0 && <> ({METODOS[h.c.metodoPago]})</>}
                         {(h.c.costo ?? 0) > (h.c.pagado ?? 0) && <span className="ml-1 font-semibold text-rose-600">quedó Bs {dinero((h.c.costo ?? 0) - (h.c.pagado ?? 0))}</span>}
                       </p>
                     )}
                   </button>
+                  {(h.c.pagado ?? 0) > 0 && (
+                    <div className="-mt-2 flex justify-end px-2 pb-2">
+                      <BotonRecibo paciente={p} datos={{ id: h.c.id!, fecha: h.c.fecha, monto: h.c.pagado!, concepto: h.c.tratamiento || h.c.motivo, metodo: h.c.metodoPago }} />
+                    </div>
+                  )}
+                  </div>
                 </li>
               ))}
             </ol>
@@ -294,14 +303,15 @@ export default function PacienteDetalle() {
   )
 }
 
-function PagoItem({ pg }: { pg: Pago }) {
+function PagoItem({ pg, paciente }: { pg: Pago; paciente: Paciente }) {
   return (
     <li className="relative">
       <span className="absolute -left-[27px] top-3.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-500 ring-2 ring-emerald-100" />
-      <div className="flex items-center justify-between gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/60 px-4 py-2.5 text-sm">
-        <span className="font-medium text-emerald-800"><Banknote size={15} className="mr-1.5 inline" />Pagó Bs {dinero(pg.monto)}{pg.nota ? ` · ${pg.nota}` : ''}</span>
-        <span className="flex items-center gap-2 text-xs text-slate-500">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/60 px-4 py-2.5 text-sm">
+        <span className="font-medium text-emerald-800"><Banknote size={15} className="mr-1.5 inline" />Pagó Bs {dinero(pg.monto)}{pg.metodo ? ` (${METODOS[pg.metodo]})` : ''}{pg.nota ? ` · ${pg.nota}` : ''}</span>
+        <span className="flex items-center gap-1 text-xs text-slate-500">
           {fechaCorta(pg.fecha)}
+          <BotonRecibo paciente={paciente} datos={{ id: pg.id!, fecha: pg.fecha, monto: pg.monto, concepto: `Abono a cuenta${pg.nota ? ` (${pg.nota})` : ''}`, metodo: pg.metodo }} />
           <button aria-label="Eliminar pago" className="text-slate-400 hover:text-rose-600" onClick={() => confirm('¿Eliminar este pago?') && db.pagos.delete(pg.id!)}><Trash2 size={14} /></button>
         </span>
       </div>
@@ -312,17 +322,23 @@ function PagoItem({ pg }: { pg: Pago }) {
 function FormPago({ pacienteId, saldo, onListo }: { pacienteId: number; saldo: number; onListo: () => void }) {
   const [monto, setMonto] = useState(String(saldo))
   const [nota, setNota] = useState('')
+  const [metodo, setMetodo] = useState<MetodoPago>('efectivo')
   return (
     <form className="space-y-4" onSubmit={async (e) => {
       e.preventDefault()
       const m = Number(monto)
       if (!(m > 0)) return
-      await db.pagos.add({ pacienteId, fecha: Date.now(), monto: m, nota: nota.trim() || undefined })
+      await db.pagos.add({ pacienteId, fecha: Date.now(), monto: m, metodo, nota: nota.trim() || undefined })
       onListo()
     }}>
       <p className="text-sm text-slate-500">Saldo actual: <b className="text-rose-600">Bs {dinero(saldo)}</b></p>
       <Campo label="Monto (Bs)"><input className="input" type="number" inputMode="decimal" min="0" step="any" value={monto} onChange={(e) => setMonto(e.target.value)} autoFocus /></Campo>
-      <Campo label="Nota (opcional)"><input className="input" placeholder="Ej: QR, efectivo…" value={nota} onChange={(e) => setNota(e.target.value)} /></Campo>
+      <div>
+        <span className="label">Forma de pago</span>
+        <MetodoSelector valor={metodo} onChange={setMetodo} />
+        {Number(monto) > 0 && <div className="mt-2"><BotonCobrarQR monto={Number(monto)} onPagado={() => setMetodo('qr')} /></div>}
+      </div>
+      <Campo label="Nota (opcional)"><input className="input" placeholder="Ej: N° de comprobante" value={nota} onChange={(e) => setNota(e.target.value)} /></Campo>
       <button className="btn-primary w-full">Guardar pago</button>
     </form>
   )
