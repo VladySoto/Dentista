@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Building2, Check, Cloud, Download, Pill, QrCode, MessageCircle, Plus, ShieldCheck, Smartphone, Stethoscope, Trash2, Upload } from 'lucide-react'
+import { Building2, Check, Cloud, Download, Lock, Pill, QrCode, MessageCircle, Plus, ShieldCheck, Smartphone, Stethoscope, Trash2, Upload } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import AjustesBloqueo from '../components/AjustesBloqueo'
 import CuentaNube from '../components/CuentaNube'
 import TurnosQR from '../components/TurnosQR'
 import { Campo, Encabezado } from '../components/ui'
@@ -16,6 +17,10 @@ export default function Ajustes() {
         <Seccion icono={<Cloud size={20} />} titulo="Cuenta y nube"
           sub="Con una cuenta, los datos se guardan en la nube y se ven en todos tus dispositivos (celular, PC, tablet). Sin internet sigue funcionando y sube los cambios después.">
           <CuentaNube />
+        </Seccion>
+        <Seccion icono={<Lock size={20} />} titulo="Bloqueo con PIN o huella"
+          sub="Protege los datos de los pacientes si el celular se pierde o lo usa otra persona. Cada dispositivo tiene su propio PIN.">
+          <AjustesBloqueo />
         </Seccion>
         <Seccion icono={<QrCode size={20} />} titulo="Turnos por QR">
           <TurnosQR />

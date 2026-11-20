@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import Bloqueo from './components/Bloqueo'
 import Layout from './components/Layout'
 import './index.css'
 import Ajustes from './pages/Ajustes'
@@ -23,8 +24,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <Routes>
         <Route path="t/:codigo" element={<TomarTurno />} />
-        <Route path="cartel" element={<Cartel />} />
-        <Route element={<Layout />}>
+        <Route path="cartel" element={<Bloqueo><Cartel /></Bloqueo>} />
+        <Route element={<Bloqueo><Layout /></Bloqueo>}>
           <Route index element={<SalaEspera />} />
           <Route path="citas" element={<Citas />} />
           <Route path="pacientes" element={<Pacientes />} />
