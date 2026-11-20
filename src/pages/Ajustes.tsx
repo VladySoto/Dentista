@@ -43,6 +43,9 @@ export default function Ajustes() {
             <li><b>iPhone (Safari):</b> botón Compartir → “Agregar a inicio”.</li>
             <li><b>PC (Chrome/Edge):</b> ícono de instalar en la barra de direcciones.</li>
           </ul>
+          <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-400">
+            Versión del {new Date(__VERSION__).toLocaleString('es', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} · {location.host}
+          </p>
         </Seccion>
       </div>
     </>

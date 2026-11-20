@@ -288,7 +288,9 @@ function traducir(msg: string) {
   if (/already registered/i.test(msg)) return 'Ese correo ya tiene cuenta. Usa “Iniciar sesión”.'
   if (/password should be at least/i.test(msg)) return 'La contraseña debe tener al menos 6 caracteres.'
   if (/signups not allowed/i.test(msg)) return 'No se permiten cuentas nuevas en este consultorio.'
-  if (/fetch/i.test(msg)) return 'Sin conexión a internet.'
+  if (/fetch|network|load failed/i.test(msg)) return navigator.onLine
+    ? 'No se pudo conectar con la nube. Si tienes internet, entra a supabase.com y revisa que el proyecto no esté pausado (botón "Restore project").'
+    : 'Sin conexión a internet.'
   return msg
 }
 
