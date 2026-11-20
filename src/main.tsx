@@ -8,6 +8,7 @@ import Ajustes from './pages/Ajustes'
 import Caja from './pages/Caja'
 import Inventario from './pages/Inventario'
 import Mas from './pages/Mas'
+import Reportes from './pages/Reportes'
 import Cartel from './pages/Cartel'
 import TomarTurno from './pages/TomarTurno'
 import Citas from './pages/Citas'
@@ -35,6 +36,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="caja" element={<Caja />} />
           <Route path="inventario" element={<Inventario />} />
           <Route path="mas" element={<Mas />} />
+          <Route path="reportes" element={<Reportes />} />
           <Route path="ajustes" element={<Ajustes />} />
         </Route>
       </Routes>
