@@ -3,6 +3,21 @@ import Dexie, { type EntityTable } from 'dexie'
 export type EstadoDiente =
   | 'sano' | 'caries' | 'obturado' | 'endodoncia' | 'corona' | 'extraido' | 'implante' | 'ausente'
 
+/** Caras del diente: Vestibular, Lingual/palatino, Mesial, Distal, Oclusal/incisal. */
+export type Cara = 'V' | 'L' | 'M' | 'D' | 'O'
+export type EstadoCara = 'caries' | 'obturado'
+export type CarasDientes = Record<number, Partial<Record<Cara, EstadoCara>>>
+export type Denticion = 'adulto' | 'nino' | 'mixta'
+
+/** Cómo estaba la boca en una fecha (se guarda solo al cambiar el odontograma). */
+export interface OdontogramaDia {
+  id?: number
+  pacienteId: number
+  fecha: string // YYYY-MM-DD
+  dientes: Record<number, EstadoDiente>
+  caras: CarasDientes
+}
+
 export interface Paciente {
   id?: number
   nombre: string
@@ -22,6 +37,8 @@ export interface Paciente {
   /** Enviar los avisos de WhatsApp al contacto en vez de al paciente. */
   avisarContacto?: boolean
   dientes?: Record<number, EstadoDiente>
+  caras?: CarasDientes
+  denticion?: Denticion
   creado: number
 }
 
@@ -171,6 +188,7 @@ export const db = new Dexie('consultorio-dental') as Dexie & {
   archivosLocal: EntityTable<ArchivoLocal, 'id'>
   documentos: EntityTable<Documento, 'id'>
   medicamentos: EntityTable<Medicamento, 'id'>
+  odontogramas: EntityTable<OdontogramaDia, 'id'>
   /** Cambios locales que faltan subir a la nube. */
   pendientes: EntityTable<Pendiente, 'tabla'>
   /** Datos internos de la sincronización (no se sincronizan). */
@@ -202,6 +220,10 @@ db.version(4).stores({
   archivosLocal: 'id, subido',
   documentos: '++id, pacienteId, fecha',
   medicamentos: '++id, nombre',
+})
+
+db.version(5).stores({
+  odontogramas: '++id, pacienteId, [pacienteId+fecha]',
 })
 
 /**
@@ -266,17 +288,17 @@ export async function registrarLlegada(pacienteId?: number, motivo?: string) {
 }
 
 export async function exportarRespaldo() {
-  const [pacientes, turnos, citas, consultas, pagos, tratamientos, config, archivos, documentos, medicamentos] = await Promise.all([
+  const [pacientes, turnos, citas, consultas, pagos, tratamientos, config, archivos, documentos, medicamentos, odontogramas] = await Promise.all([
     db.pacientes.toArray(), db.turnos.toArray(), db.citas.toArray(), db.consultas.toArray(),
     db.pagos.toArray(), db.tratamientos.toArray(), db.config.toArray(),
-    db.archivos.toArray(), db.documentos.toArray(), db.medicamentos.toArray(),
+    db.archivos.toArray(), db.documentos.toArray(), db.medicamentos.toArray(), db.odontogramas.toArray(),
   ])
   // Las imágenes completas no van en el respaldo: quedan en la nube (aquí solo sus datos y miniaturas)
-  return { version: 2, exportado: new Date().toISOString(), pacientes, turnos, citas, consultas, pagos, tratamientos, config, archivos, documentos, medicamentos }
+  return { version: 2, exportado: new Date().toISOString(), pacientes, turnos, citas, consultas, pagos, tratamientos, config, archivos, documentos, medicamentos, odontogramas }
 }
 
-const TABLAS = ['pacientes', 'turnos', 'citas', 'consultas', 'pagos', 'tratamientos', 'config', 'archivos', 'documentos', 'medicamentos'] as const
-const OPCIONALES = new Set<string>(['tratamientos', 'config', 'archivos', 'documentos', 'medicamentos'])
+const TABLAS = ['pacientes', 'turnos', 'citas', 'consultas', 'pagos', 'tratamientos', 'config', 'archivos', 'documentos', 'medicamentos', 'odontogramas'] as const
+const OPCIONALES = new Set<string>(['tratamientos', 'config', 'archivos', 'documentos', 'medicamentos', 'odontogramas'])
 
 export async function importarRespaldo(data: Partial<Awaited<ReturnType<typeof exportarRespaldo>>> & { version?: number }) {
   if (!data || (data.version !== 1 && data.version !== 2) || !Array.isArray(data.pacientes)) throw new Error('Archivo de respaldo no válido')

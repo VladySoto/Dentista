@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { db, type Paciente } from '../lib/db'
+import { edad } from '../lib/format'
 import { Campo } from './ui'
 
 export default function PacienteForm({ inicial, nombreInicial = '', datosIniciales, onGuardado }: {
@@ -7,6 +8,8 @@ export default function PacienteForm({ inicial, nombreInicial = '', datosInicial
 }) {
   const [p, setP] = useState<Paciente>(inicial ?? { nombre: nombreInicial, creado: Date.now(), sexo: '', ...datosIniciales })
   const [guardando, setGuardando] = useState(false)
+  const e = edad(p.fechaNacimiento)
+  const menor = e !== null && e < 18
   const set = (k: keyof Paciente) => (e: { target: { value: string } }) => setP({ ...p, [k]: e.target.value })
 
   async function guardar(e: FormEvent) {
@@ -44,11 +47,11 @@ export default function PacienteForm({ inicial, nombreInicial = '', datosInicial
         </div>
       </div>
       <div className="rounded-2xl bg-sky-50 p-4">
-        <p className="text-sm font-semibold text-sky-900">Familiar o contacto <span className="font-normal text-sky-700">(opcional)</span></p>
-        <p className="mb-3 text-xs text-sky-700">Útil si el paciente no tiene celular o no usa WhatsApp.</p>
+        <p className="text-sm font-semibold text-sky-900">{menor ? 'Padre, madre o tutor' : 'Familiar o contacto'} <span className="font-normal text-sky-700">(opcional)</span></p>
+        <p className="mb-3 text-xs text-sky-700">{menor ? 'Responsable del menor: recibe los avisos de citas y pagos.' : 'Útil si el paciente no tiene celular o no usa WhatsApp.'}</p>
         <div className="grid grid-cols-2 gap-3">
           <Campo label="Nombre"><input className="input" placeholder="Ej: Carla" value={p.contactoNombre ?? ''} onChange={set('contactoNombre')} /></Campo>
-          <Campo label="Parentesco"><input className="input" placeholder="Ej: Hija" value={p.contactoParentesco ?? ''} onChange={set('contactoParentesco')} /></Campo>
+          <Campo label="Parentesco"><input className="input" placeholder={menor ? 'Ej: Mamá' : 'Ej: Hija'} value={p.contactoParentesco ?? ''} onChange={set('contactoParentesco')} /></Campo>
         </div>
         <div className="mt-3"><Campo label="Teléfono del contacto"><input className="input" type="tel" value={p.contactoTelefono ?? ''} onChange={set('contactoTelefono')} /></Campo></div>
         {p.contactoTelefono && (

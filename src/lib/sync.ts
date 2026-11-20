@@ -12,7 +12,7 @@ import { useSyncExternalStore } from 'react'
 import { db, type Pendiente } from './db'
 import { supabase } from './supabase'
 
-const TABLAS = ['pacientes', 'turnos', 'citas', 'consultas', 'pagos', 'tratamientos', 'config', 'archivos', 'documentos', 'medicamentos'] as const
+const TABLAS = ['pacientes', 'turnos', 'citas', 'consultas', 'pagos', 'tratamientos', 'config', 'archivos', 'documentos', 'medicamentos', 'odontogramas'] as const
 type NombreTabla = (typeof TABLAS)[number]
 const tabla = (t: NombreTabla) => db[t] as unknown as Table<Record<string, unknown>, number | string>
 const clave = (t: string, id: string) => (t === 'config' ? id : Number(id))
@@ -228,7 +228,7 @@ async function prepararDispositivo(uid: string, combinar: () => Promise<boolean>
         await db.medicamentos.clear()
         await db.pendientes.where('tabla').anyOf('tratamientos', 'config', 'medicamentos').delete()
         const ahora = Date.now()
-        for (const t of ['pacientes', 'turnos', 'citas', 'consultas', 'pagos', 'archivos', 'documentos'] as const) {
+        for (const t of ['pacientes', 'turnos', 'citas', 'consultas', 'pagos', 'archivos', 'documentos', 'odontogramas'] as const) {
           const ids = (await tabla(t).toCollection().primaryKeys()) as (string | number)[]
           await db.pendientes.bulkPut(ids.map((id) => ({ tabla: t, id: String(id), ts: ahora })))
         }

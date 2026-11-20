@@ -87,8 +87,8 @@ export default function PacienteDetalle() {
   async function eliminar() {
     if (!confirm(`¿Eliminar a ${p!.nombre} y todo su historial? Esta acción no se puede deshacer.`)) return
     for (const a of (await db.archivos.where('pacienteId').equals(id).primaryKeys()) as number[]) await borrarImagen(a)
-    await db.transaction('rw', [db.pacientes, db.consultas, db.turnos, db.citas, db.pagos, db.documentos], async () => {
-      for (const t of [db.consultas, db.turnos, db.citas, db.pagos, db.documentos]) await t.where('pacienteId').equals(id).delete()
+    await db.transaction('rw', [db.pacientes, db.consultas, db.turnos, db.citas, db.pagos, db.documentos, db.odontogramas], async () => {
+      for (const t of [db.consultas, db.turnos, db.citas, db.pagos, db.documentos, db.odontogramas]) await t.where('pacienteId').equals(id).delete()
       await db.pacientes.delete(id)
     })
     navigate('/pacientes')
@@ -236,7 +236,7 @@ export default function PacienteDetalle() {
 
       {tab === 'odontograma' && (
         <div className="card p-3 sm:p-5">
-          <Odontograma dientes={p.dientes ?? {}} onCambiar={(d) => db.pacientes.update(id, { dientes: d })} />
+          <Odontograma paciente={p} />
         </div>
       )}
 
