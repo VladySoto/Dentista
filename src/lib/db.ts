@@ -62,7 +62,11 @@ export interface Turno {
   nombreLlegada?: string
   documentoLlegada?: string
   telefonoLlegada?: string
+  /** Cobro de una atención sin nombre. Al identificar al paciente pasa a ser una consulta suya. */
+  cobro?: CobroTurno
 }
+
+export interface CobroTurno { costo: number; pagado: number; concepto?: string; metodo?: MetodoPago }
 
 export type EstadoCita = 'pendiente' | 'confirmada' | 'llego' | 'cancelada'
 
@@ -388,4 +392,29 @@ export function avisoWhatsApp(p: Paciente | undefined, plantilla: string, vars: 
   const contacto = p.contactoNombre?.trim().split(/\s+/)[0] ?? ''
   const texto = rellenar(plantilla, { ...vars, nombre: contacto }).replace(/^Hola\s+([,!👋 ])/u, 'Hola$1')
   return enlaceWhatsApp(p.contactoTelefono, `${texto}\n\n(Paciente: ${p.nombre})`)
+}
+
+/**
+ * Asigna un paciente a un turno. Si el turno ya se atendió sin nombre y tenía un cobro,
+ * ese cobro pasa a ser una consulta en el historial del paciente.
+ */
+export async function identificarTurno(turnoId: number, pacienteId: number) {
+  await db.transaction('rw', db.turnos, db.consultas, async () => {
+    const t = await db.turnos.get(turnoId)
+    if (!t) return
+    if (t.cobro) {
+      await db.consultas.add({
+        pacienteId, fecha: t.fin ?? t.inicio ?? t.llegada, motivo: t.cobro.concepto || t.motivo || 'Consulta',
+        tratamiento: t.cobro.concepto, costo: t.cobro.costo, pagado: t.cobro.pagado || undefined,
+        metodoPago: t.cobro.pagado > 0 ? t.cobro.metodo ?? 'efectivo' : undefined,
+      })
+    }
+    await db.turnos.update(turnoId, { pacienteId, cobro: undefined })
+  })
+}
+
+/** Cobros de atenciones sin nombre dentro de un rango de fechas (cuentan en Caja y Reportes). */
+export async function cobrosSinNombre(ini: number, fin: number) {
+  const turnos = await db.turnos.filter((t) => !!t.cobro && (t.fin ?? t.llegada) >= ini && (t.fin ?? t.llegada) < fin).toArray()
+  return turnos.filter((t) => t.cobro!.pagado > 0)
 }

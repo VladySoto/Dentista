@@ -1,12 +1,13 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import {
-  AlertTriangle, Banknote, CalendarCheck, CheckCircle2, ChevronRight, Megaphone, Play, Smartphone, Ticket, Undo2, UserPlus, UserSearch, Users, X,
+  AlertTriangle, Banknote, CalendarCheck, CheckCircle2, ChevronRight, Megaphone, Play, Smartphone, Ticket, Undo2, UserPlus, Users, X,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import PacienteSelector from '../components/PacienteSelector'
+import { IdentificarTurno, TerminarSinNombre } from '../components/TurnoRapido'
 import { Encabezado, Modal, Vacio } from '../components/ui'
-import { db, hoy, llamarSiguiente, registrarLlegada, type Paciente, type Turno } from '../lib/db'
+import { cobrosSinNombre, db, hoy, identificarTurno, llamarSiguiente, registrarLlegada, type Paciente, type Turno } from '../lib/db'
 import { dinero, duracion, fechaLarga, hora, minutosDesde } from '../lib/format'
 import { useAhora } from '../lib/useAhora'
 
@@ -21,6 +22,7 @@ export default function SalaEspera() {
   const [ticket, setTicket] = useState<number | null>(null)
   const [aviso, setAviso] = useState<{ numero: number; id: number } | null>(null)
   const [identificar, setIdentificar] = useState<Turno | null>(null)
+  const [terminar, setTerminar] = useState<Turno | null>(null)
 
   const datos = useLiveQuery(async () => {
     const turnos = await db.turnos.where('fecha').equals(fecha).sortBy('numero')
@@ -33,7 +35,8 @@ export default function SalaEspera() {
       db.consultas.where('fecha').between(inicio, fin).toArray(),
       db.pagos.where('fecha').between(inicio, fin).toArray(),
     ])
-    const cobrado = consultas.reduce((s, c) => s + (c.pagado ?? 0), 0) + pagos.reduce((s, p) => s + p.monto, 0)
+    const sinNombre = await cobrosSinNombre(inicio, fin)
+    const cobrado = consultas.reduce((s, c) => s + (c.pagado ?? 0), 0) + pagos.reduce((s, p) => s + p.monto, 0) + sinNombre.reduce((s, t) => s + t.cobro!.pagado, 0)
     return { turnos, citas, pacientes, cobrado }
   }, [fecha])
 
@@ -83,10 +86,14 @@ export default function SalaEspera() {
     await db.citas.update(citaId, { estado: 'llego' })
   }
 
-  /** Abre la ficha; si el turno no tiene nombre, primero pide identificar al paciente. */
+  /** Abre la ficha; si el turno no tiene nombre, ofrece identificarlo (opcional). */
   function abrir(t: Turno) {
     if (t.pacienteId) navigate(`/pacientes/${t.pacienteId}`)
     else setIdentificar(t)
+  }
+  async function alTerminar(siguienteTambien: boolean) {
+    setTerminar(null)
+    if (siguienteTambien) await siguiente()
   }
   async function atender(t: Turno) {
     const actualizado = { ...t, estado: 'atencion' as const, inicio: Date.now() }
@@ -99,7 +106,7 @@ export default function SalaEspera() {
   }
   async function alIdentificar(pacienteId: number) {
     const t = identificar!
-    await db.turnos.update(t.id!, { pacienteId })
+    await identificarTurno(t.id!, pacienteId)
     setIdentificar(null)
     if (t.estado === 'atencion') navigate(`/pacientes/${pacienteId}`)
   }
@@ -145,7 +152,8 @@ export default function SalaEspera() {
           <div className="space-y-2">
             {atencion.map((t) => (
               <TurnoCard key={t.id} t={t} p={t.pacienteId ? pacientes.get(t.pacienteId) : undefined} ahora={ahora} activo onAbrir={() => abrir(t)}>
-                <button className="btn-primary" onClick={() => abrir(t)}>{t.pacienteId ? 'Abrir ficha' : 'Identificar'}</button>
+                {t.pacienteId ? <button className="btn-primary" onClick={() => abrir(t)}>Abrir ficha</button>
+                  : <button className="btn-primary" onClick={() => setTerminar(t)}>Terminar</button>}
               </TurnoCard>
             ))}
           </div>
@@ -194,7 +202,11 @@ export default function SalaEspera() {
             {atendidos.map((t) => (
               <button key={t.id} onClick={() => abrir(t)} className="flex w-full items-center gap-3 p-3 text-left hover:bg-slate-50">
                 <span className="w-10 text-center text-sm font-bold text-slate-400">#{t.numero}</span>
-                <p className="min-w-0 flex-1 truncate">{nombre(t)}</p>
+                <p className="min-w-0 flex-1 truncate">
+                  {nombre(t)}
+                  {!t.pacienteId && <span className="ml-1 text-xs text-teal-700">· ponerle nombre</span>}
+                </p>
+                {t.cobro && t.cobro.pagado > 0 && <span className="text-xs font-semibold text-emerald-700">Bs {dinero(t.cobro.pagado)}</span>}
                 <span className="text-xs text-slate-500">{t.fin ? hora(t.fin) : ''}</span>
               </button>
             ))}
@@ -235,11 +247,21 @@ export default function SalaEspera() {
         )}
       </Modal>
 
+      <Modal abierto={!!terminar} onCerrar={() => setTerminar(null)} titulo={`Terminar turno ${terminar?.numero ?? ''}`}>
+        {terminar && (
+          <>
+            <TerminarSinNombre key={terminar.id} turno={terminar} enEspera={espera.length} onListo={alTerminar} />
+            <button className="mt-3 w-full text-center text-sm text-teal-700 underline-offset-2 hover:underline" onClick={() => { setIdentificar(terminar); setTerminar(null) }}>
+              Ponerle nombre y abrir su ficha
+            </button>
+          </>
+        )}
+      </Modal>
+
       <Modal abierto={!!identificar} onCerrar={() => setIdentificar(null)} titulo={`¿Quién tiene el turno ${identificar?.numero ?? ''}?`}>
-        <p className="-mt-1 mb-3 flex items-center gap-2 text-sm text-slate-500"><UserSearch size={16} /> Búscalo por nombre o carnet, o regístralo si es nuevo.</p>
         {identificar && (
-          <PacienteSelector key={identificar.id} onElegir={alIdentificar}
-            sugerido={identificar.nombreLlegada ? { nombre: identificar.nombreLlegada, documento: identificar.documentoLlegada, telefono: identificar.telefonoLlegada } : undefined} />
+          <IdentificarTurno key={identificar.id} turno={identificar} onElegir={alIdentificar}
+            onSinNombre={identificar.estado === 'atencion' ? () => setIdentificar(null) : undefined} />
         )}
       </Modal>
     </>

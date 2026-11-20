@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import GastoForm from '../components/GastoForm'
 import { Avatar, Encabezado, Modal } from '../components/ui'
-import { avisoWhatsApp, calcularSaldo, db, hoy, METODOS, varsPlantilla, type MetodoPago, type Consulta, type Gasto, type Pago, type Paciente } from '../lib/db'
+import { avisoWhatsApp, calcularSaldo, cobrosSinNombre, db, hoy, METODOS, varsPlantilla, type MetodoPago, type Consulta, type Gasto, type Pago, type Paciente } from '../lib/db'
 import { dinero, fechaCorta, hora } from '../lib/format'
 import { useConfig } from '../lib/useConfig'
 
@@ -37,7 +37,11 @@ export default function Caja() {
       ...consultas.filter((c) => c.fecha >= ini && c.fecha < fin && (c.pagado ?? 0) > 0)
         .map((c) => ({ fecha: c.fecha, pacienteId: c.pacienteId, concepto: c.tratamiento || c.motivo, monto: c.pagado!, metodo: c.metodoPago ?? 'efectivo' as MetodoPago })),
       ...pagos.filter((p) => p.fecha >= ini && p.fecha < fin)
-        .map((p) => ({ fecha: p.fecha, pacienteId: p.pacienteId, concepto: `Abono${p.nota ? ` · ${p.nota}` : ''}`, monto: p.monto, metodo: p.metodo ?? 'efectivo' as MetodoPago })),
+        .map((p) => ({ fecha: p.fecha, pacienteId: p.pacienteId as number | undefined, concepto: `Abono${p.nota ? ` · ${p.nota}` : ''}`, monto: p.monto, metodo: p.metodo ?? 'efectivo' as MetodoPago })),
+      ...(await cobrosSinNombre(ini, fin)).map((t) => ({
+        fecha: t.fin ?? t.llegada, pacienteId: undefined, concepto: `Turno ${t.numero} sin nombre${t.cobro!.concepto ? ` · ${t.cobro!.concepto}` : ''}`,
+        monto: t.cobro!.pagado, metodo: t.cobro!.metodo ?? 'efectivo' as MetodoPago,
+      })),
     ].sort((a, b) => b.fecha - a.fecha)
     const atenciones = consultas.filter((c) => c.fecha >= ini && c.fecha < fin).length
 
@@ -117,10 +121,10 @@ export default function Caja() {
       <Seccion titulo="Movimientos" icono={<Receipt size={16} />}>
         {datos.movimientos.length === 0 ? <p className="p-4 text-sm text-slate-500">Sin cobros en este periodo.</p> :
           datos.movimientos.map((m, i) => (
-            <Link key={i} to={`/pacientes/${m.pacienteId}`} className="flex items-center gap-3 p-3 hover:bg-slate-50">
+            <Link key={i} to={m.pacienteId ? `/pacientes/${m.pacienteId}` : '/'} className="flex items-center gap-3 p-3 hover:bg-slate-50">
               <span className="w-14 shrink-0 text-xs text-slate-500">{periodo === 'hoy' ? hora(m.fecha) : fechaCorta(m.fecha).replace(/ \d{4}$/, '')}</span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{datos.porId.get(m.pacienteId)?.nombre}</p>
+                <p className="truncate text-sm font-medium">{m.pacienteId ? datos.porId.get(m.pacienteId)?.nombre : 'Sin nombre'}</p>
                 <p className="truncate text-xs text-slate-500">{m.concepto}</p>
               </div>
               <span className="font-semibold text-emerald-700">+{dinero(m.monto)}</span>

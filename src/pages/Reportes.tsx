@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { ChevronLeft, ChevronRight, Download, FileSpreadsheet } from 'lucide-react'
 import { useState } from 'react'
 import { Encabezado } from '../components/ui'
-import { calcularSaldo, db, METODOS, type Consulta, type Gasto, type Pago } from '../lib/db'
+import { calcularSaldo, db, METODOS, type Consulta, type Gasto, type Pago, type Turno } from '../lib/db'
 import { dinero, fechaCorta } from '../lib/format'
 
 // Colores validados (contraste y daltonismo): cobrado = verde azulado de la app, gastos = naranja
@@ -13,9 +13,12 @@ const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'o
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
 const rangoMes = (anio: number, mes: number) => [new Date(anio, mes, 1).getTime(), new Date(anio, mes + 1, 1).getTime()] as const
-const cobradoDe = (cs: Consulta[], ps: Pago[], ini: number, fin: number) =>
+const fechaTurno = (t: Turno) => t.fin ?? t.llegada
+const sinNombreEn = (ts: Turno[], ini: number, fin: number) => ts.filter((t) => fechaTurno(t) >= ini && fechaTurno(t) < fin)
+const cobradoDe = (cs: Consulta[], ps: Pago[], ts: Turno[], ini: number, fin: number) =>
   cs.filter((c) => c.fecha >= ini && c.fecha < fin).reduce((s, c) => s + (c.pagado ?? 0), 0) +
-  ps.filter((p) => p.fecha >= ini && p.fecha < fin).reduce((s, p) => s + p.monto, 0)
+  ps.filter((p) => p.fecha >= ini && p.fecha < fin).reduce((s, p) => s + p.monto, 0) +
+  sinNombreEn(ts, ini, fin).reduce((s, t) => s + t.cobro!.pagado, 0)
 const gastosDe = (gs: Gasto[], ini: number, fin: number) => gs.filter((g) => g.fecha >= ini && g.fecha < fin).reduce((s, g) => s + g.monto, 0)
 
 export default function Reportes() {
@@ -25,27 +28,31 @@ export default function Reportes() {
   const mover = (d: number) => setMes(({ anio, mes }) => { const f = new Date(anio, mes + d, 1); return { anio: f.getFullYear(), mes: f.getMonth() } })
 
   const datos = useLiveQuery(async () => {
-    const [consultas, pagos, gastos, pacientes] = await Promise.all([db.consultas.toArray(), db.pagos.toArray(), db.gastos.toArray(), db.pacientes.toArray()])
+    const [consultas, pagos, gastos, pacientes, sinNombre] = await Promise.all([
+      db.consultas.toArray(), db.pagos.toArray(), db.gastos.toArray(), db.pacientes.toArray(), db.turnos.filter((t) => !!t.cobro).toArray(),
+    ])
     const [ini, fin] = rangoMes(mes.anio, mes.mes)
 
     const seisMeses = Array.from({ length: 6 }, (_, i) => {
       const f = new Date(mes.anio, mes.mes - 5 + i, 1)
       const [a, b] = rangoMes(f.getFullYear(), f.getMonth())
-      return { etiqueta: MESES[f.getMonth()], anio: f.getFullYear(), mes: f.getMonth(), cobrado: cobradoDe(consultas, pagos, a, b), gastos: gastosDe(gastos, a, b) }
+      return { etiqueta: MESES[f.getMonth()], anio: f.getFullYear(), mes: f.getMonth(), cobrado: cobradoDe(consultas, pagos, sinNombre, a, b), gastos: gastosDe(gastos, a, b) }
     })
 
     const delMes = consultas.filter((c) => c.fecha >= ini && c.fecha < fin)
+    const anonimos = sinNombreEn(sinNombre, ini, fin)
     const tratamientos = new Map<string, number>()
-    for (const c of delMes) for (const t of (c.tratamiento || c.motivo).split(',').map((x) => x.trim()).filter(Boolean)) tratamientos.set(t, (tratamientos.get(t) ?? 0) + 1)
+    const textos = [...delMes.map((c) => c.tratamiento || c.motivo), ...anonimos.map((t) => t.cobro!.concepto ?? '')]
+    for (const texto of textos) for (const t of texto.split(',').map((x) => x.trim()).filter(Boolean)) tratamientos.set(t, (tratamientos.get(t) ?? 0) + 1)
     const porDia = Array(7).fill(0) as number[]
-    for (const c of delMes) porDia[(new Date(c.fecha).getDay() + 6) % 7]++
+    for (const f of [...delMes.map((c) => c.fecha), ...anonimos.map(fechaTurno)]) porDia[(new Date(f).getDay() + 6) % 7]++
     const porCategoria = new Map<string, number>()
     for (const g of gastos.filter((g) => g.fecha >= ini && g.fecha < fin)) porCategoria.set(g.categoria, (porCategoria.get(g.categoria) ?? 0) + g.monto)
 
     return {
-      consultas, pagos, gastos, pacientes, seisMeses,
-      cobrado: cobradoDe(consultas, pagos, ini, fin), totalGastos: gastosDe(gastos, ini, fin),
-      atenciones: delMes.length, atendidos: new Set(delMes.map((c) => c.pacienteId)).size,
+      consultas, pagos, gastos, pacientes, sinNombre, seisMeses,
+      cobrado: cobradoDe(consultas, pagos, sinNombre, ini, fin), totalGastos: gastosDe(gastos, ini, fin),
+      atenciones: delMes.length + anonimos.length, atendidos: new Set(delMes.map((c) => c.pacienteId)).size,
       nuevos: pacientes.filter((p) => p.creado >= ini && p.creado < fin).length,
       tratamientos: [...tratamientos].sort((a, b) => b[1] - a[1]).slice(0, 8),
       porDia, porCategoria: [...porCategoria].sort((a, b) => b[1] - a[1]),
@@ -222,7 +229,7 @@ function BarrasDias({ valores }: { valores: number[] }) {
 
 // ---------------------------------------------------------------- exportar
 
-type Datos = { consultas: Consulta[]; pagos: Pago[]; gastos: Gasto[]; pacientes: { id?: number; nombre: string; documento?: string; telefono?: string; fechaNacimiento?: string; alergias?: string; enfermedades?: string; creado: number }[] }
+type Datos = { consultas: Consulta[]; pagos: Pago[]; gastos: Gasto[]; sinNombre: Turno[]; pacientes: { id?: number; nombre: string; documento?: string; telefono?: string; fechaNacimiento?: string; alergias?: string; enfermedades?: string; creado: number }[] }
 
 /** CSV para Excel en español: separador ";" y decimales con coma; con BOM para que respete las tildes. */
 function descargarCSV(nombre: string, filas: (string | number)[][]) {
@@ -246,6 +253,9 @@ function exportarMovimientos(d: Datos, anio: number, mes: number) {
     })),
     ...d.pagos.filter((p) => p.fecha >= ini && p.fecha < fin).map((p) => ({
       fecha: p.fecha, fila: [fechaCorta(p.fecha), 'Ingreso', nombre.get(p.pacienteId) ?? '', `Abono${p.nota ? ` (${p.nota})` : ''}`, METODOS[p.metodo ?? 'efectivo'], p.monto],
+    })),
+    ...sinNombreEn(d.sinNombre, ini, fin).filter((t) => t.cobro!.pagado > 0).map((t) => ({
+      fecha: fechaTurno(t), fila: [fechaCorta(fechaTurno(t)), 'Ingreso', `Turno ${t.numero} (sin nombre)`, t.cobro!.concepto ?? '', METODOS[t.cobro!.metodo ?? 'efectivo'], t.cobro!.pagado],
     })),
     ...d.gastos.filter((g) => g.fecha >= ini && g.fecha < fin).map((g) => ({
       fecha: g.fecha, fila: [fechaCorta(g.fecha), 'Gasto', g.categoria, g.descripcion ?? '', METODOS[g.metodo ?? 'efectivo'], -g.monto],
