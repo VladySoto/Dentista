@@ -1,9 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Banknote, CalendarClock, MessageCircle, Receipt, Wallet } from 'lucide-react'
+import { Banknote, CalendarClock, MessageCircle, Plus, Receipt, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Avatar, Encabezado } from '../components/ui'
-import { avisoWhatsApp, calcularSaldo, db, hoy, METODOS, varsPlantilla, type MetodoPago, type Consulta, type Pago, type Paciente } from '../lib/db'
+import GastoForm from '../components/GastoForm'
+import { Avatar, Encabezado, Modal } from '../components/ui'
+import { avisoWhatsApp, calcularSaldo, db, hoy, METODOS, varsPlantilla, type MetodoPago, type Consulta, type Gasto, type Pago, type Paciente } from '../lib/db'
 import { dinero, fechaCorta, hora } from '../lib/format'
 import { useConfig } from '../lib/useConfig'
 
@@ -25,6 +26,7 @@ function agrupar<T extends { pacienteId: number }>(filas: T[]) {
 export default function Caja() {
   const config = useConfig()
   const [periodo, setPeriodo] = useState<Periodo>('hoy')
+  const [gasto, setGasto] = useState<Gasto | 'nuevo' | null>(null)
 
   const datos = useLiveQuery(async () => {
     const [ini, fin] = rango(periodo)
@@ -53,17 +55,22 @@ export default function Caja() {
       .filter((x): x is { p: Paciente; ultima: Consulta } => !!x.p && !!x.ultima.proximoControl && x.ultima.proximoControl <= hoy(limite))
       .sort((a, b) => a.ultima.proximoControl!.localeCompare(b.ultima.proximoControl!))
 
-    return { movimientos, atenciones, deudores, controles, porId }
+    const gastos = (await db.gastos.where('fecha').between(ini, fin).toArray()).sort((a, b) => b.fecha - a.fecha)
+
+    return { movimientos, atenciones, deudores, controles, porId, gastos }
   }, [periodo])
 
   if (!datos) return null
   const total = datos.movimientos.reduce((s, m) => s + m.monto, 0)
   const porMetodo = datos.movimientos.reduce<Partial<Record<MetodoPago, number>>>((a, m) => ({ ...a, [m.metodo]: (a[m.metodo] ?? 0) + m.monto }), {})
   const porCobrar = datos.deudores.reduce((s, d) => s + d.saldo, 0)
+  const totalGastos = datos.gastos.reduce((s, g) => s + g.monto, 0)
+  const ganancia = total - totalGastos
 
   return (
     <>
-      <Encabezado titulo="Caja" sub="Ingresos, deudas y controles pendientes" />
+      <Encabezado titulo="Caja" sub="Ingresos, gastos, deudas y controles"
+        accion={<button className="btn-soft" onClick={() => setGasto('nuevo')}><Plus size={18} /> Gasto</button>} />
 
       <div className="mb-4 grid grid-cols-2 rounded-xl bg-slate-200/60 p-1">
         {([['hoy', 'Hoy'], ['mes', 'Este mes']] as const).map(([k, l]) => (
@@ -84,6 +91,16 @@ export default function Caja() {
               ))}
             </div>
           )}
+        </div>
+        <div className="card p-4">
+          <TrendingDown size={18} className="mb-1 text-orange-500" />
+          <p className="text-xl font-bold">Bs {dinero(totalGastos)}</p>
+          <p className="text-xs text-slate-500">Gastos {periodo === 'hoy' ? 'de hoy' : 'del mes'}</p>
+        </div>
+        <div className={`card p-4 ${ganancia < 0 ? 'border-rose-200 bg-rose-50' : ''}`}>
+          {ganancia < 0 ? <TrendingDown size={18} className="mb-1 text-rose-500" /> : <TrendingUp size={18} className="mb-1 text-emerald-600" />}
+          <p className={`text-xl font-bold ${ganancia < 0 ? 'text-rose-700' : 'text-emerald-700'}`}>{ganancia < 0 ? '−' : ''}Bs {dinero(Math.abs(ganancia))}</p>
+          <p className="text-xs text-slate-500">Ganancia (cobrado − gastos)</p>
         </div>
         <div className="card p-4">
           <Wallet size={18} className="mb-1 text-rose-500" />
@@ -111,6 +128,24 @@ export default function Caja() {
           ))}
       </Seccion>
 
+      <Seccion titulo="Gastos" icono={<TrendingDown size={16} />}>
+        {datos.gastos.length === 0 ? (
+          <div className="flex items-center justify-between gap-3 p-4">
+            <p className="text-sm text-slate-500">Sin gastos en este periodo.</p>
+            <button className="btn-soft px-3 py-1.5 text-xs" onClick={() => setGasto('nuevo')}><Plus size={15} /> Agregar gasto</button>
+          </div>
+        ) : datos.gastos.map((g) => (
+          <button key={g.id} onClick={() => setGasto(g)} className="flex w-full items-center gap-3 p-3 text-left hover:bg-slate-50">
+            <span className="w-14 shrink-0 text-xs text-slate-500">{fechaCorta(g.fecha).replace(/ \d{4}$/, '')}</span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{g.categoria}</p>
+              {g.descripcion && <p className="truncate text-xs text-slate-500">{g.descripcion}</p>}
+            </div>
+            <span className="font-semibold text-orange-700">−{dinero(g.monto)}</span>
+          </button>
+        ))}
+      </Seccion>
+
       <Seccion titulo="Pacientes que deben" icono={<Banknote size={16} />}>
         {datos.deudores.length === 0 ? <p className="p-4 text-sm text-slate-500">Nadie tiene deudas. 🎉</p> :
           datos.deudores.map(({ p, saldo }) => (
@@ -130,6 +165,9 @@ export default function Caja() {
             )
           })}
       </Seccion>
+      <Modal abierto={!!gasto} onCerrar={() => setGasto(null)} titulo={gasto === 'nuevo' ? 'Nuevo gasto' : 'Editar gasto'}>
+        {gasto && <GastoForm key={gasto === 'nuevo' ? 'nuevo' : gasto.id} inicial={gasto === 'nuevo' ? undefined : gasto} onListo={() => setGasto(null)} />}
+      </Modal>
     </>
   )
 }

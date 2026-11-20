@@ -6,6 +6,8 @@ import Layout from './components/Layout'
 import './index.css'
 import Ajustes from './pages/Ajustes'
 import Caja from './pages/Caja'
+import Inventario from './pages/Inventario'
+import Mas from './pages/Mas'
 import Cartel from './pages/Cartel'
 import TomarTurno from './pages/TomarTurno'
 import Citas from './pages/Citas'
@@ -31,6 +33,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="pacientes" element={<Pacientes />} />
           <Route path="pacientes/:id" element={<PacienteDetalle />} />
           <Route path="caja" element={<Caja />} />
+          <Route path="inventario" element={<Inventario />} />
+          <Route path="mas" element={<Mas />} />
           <Route path="ajustes" element={<Ajustes />} />
         </Route>
       </Routes>

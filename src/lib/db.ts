@@ -131,6 +131,28 @@ export type Documento =
   | { id?: number; pacienteId: number; fecha: number; tipo: 'receta'; medicamentos: ItemReceta[]; indicaciones?: string }
   | { id?: number; pacienteId: number; fecha: number; tipo: 'presupuesto'; items: ItemPresupuesto[]; descuento?: number; validezDias: number; notas?: string }
 
+export const CATEGORIAS_GASTO = ['Materiales', 'Laboratorio', 'Alquiler', 'Servicios (luz, agua, internet)', 'Equipos y mantenimiento', 'Impuestos', 'Personal', 'Otros'] as const
+
+export interface Gasto {
+  id?: number
+  fecha: number
+  categoria: string
+  monto: number
+  descripcion?: string
+  metodo?: MetodoPago
+}
+
+/** Material del consultorio (anestesia, resinas, guantes…). */
+export interface Material {
+  id?: number
+  nombre: string
+  cantidad: number
+  /** Avisar cuando quede esta cantidad o menos. */
+  minimo: number
+  unidad?: string
+  vence?: string // YYYY-MM-DD
+}
+
 export interface Tratamiento {
   id?: number
   nombre: string
@@ -197,6 +219,8 @@ export const db = new Dexie('consultorio-dental') as Dexie & {
   documentos: EntityTable<Documento, 'id'>
   medicamentos: EntityTable<Medicamento, 'id'>
   odontogramas: EntityTable<OdontogramaDia, 'id'>
+  gastos: EntityTable<Gasto, 'id'>
+  materiales: EntityTable<Material, 'id'>
   /** Cambios locales que faltan subir a la nube. */
   pendientes: EntityTable<Pendiente, 'tabla'>
   /** Datos internos de la sincronización (no se sincronizan). */
@@ -232,6 +256,11 @@ db.version(4).stores({
 
 db.version(5).stores({
   odontogramas: '++id, pacienteId, [pacienteId+fecha]',
+})
+
+db.version(6).stores({
+  gastos: '++id, fecha, categoria',
+  materiales: '++id, nombre',
 })
 
 /**
@@ -301,12 +330,13 @@ export async function exportarRespaldo() {
     db.pagos.toArray(), db.tratamientos.toArray(), db.config.toArray(),
     db.archivos.toArray(), db.documentos.toArray(), db.medicamentos.toArray(), db.odontogramas.toArray(),
   ])
+  const [gastos, materiales] = await Promise.all([db.gastos.toArray(), db.materiales.toArray()])
   // Las imágenes completas no van en el respaldo: quedan en la nube (aquí solo sus datos y miniaturas)
-  return { version: 2, exportado: new Date().toISOString(), pacientes, turnos, citas, consultas, pagos, tratamientos, config, archivos, documentos, medicamentos, odontogramas }
+  return { version: 2, exportado: new Date().toISOString(), pacientes, turnos, citas, consultas, pagos, tratamientos, config, archivos, documentos, medicamentos, odontogramas, gastos, materiales }
 }
 
-const TABLAS = ['pacientes', 'turnos', 'citas', 'consultas', 'pagos', 'tratamientos', 'config', 'archivos', 'documentos', 'medicamentos', 'odontogramas'] as const
-const OPCIONALES = new Set<string>(['tratamientos', 'config', 'archivos', 'documentos', 'medicamentos', 'odontogramas'])
+const TABLAS = ['pacientes', 'turnos', 'citas', 'consultas', 'pagos', 'tratamientos', 'config', 'archivos', 'documentos', 'medicamentos', 'odontogramas', 'gastos', 'materiales'] as const
+const OPCIONALES = new Set<string>(['tratamientos', 'config', 'archivos', 'documentos', 'medicamentos', 'odontogramas', 'gastos', 'materiales'])
 
 export async function importarRespaldo(data: Partial<Awaited<ReturnType<typeof exportarRespaldo>>> & { version?: number }) {
   if (!data || (data.version !== 1 && data.version !== 2) || !Array.isArray(data.pacientes)) throw new Error('Archivo de respaldo no válido')
