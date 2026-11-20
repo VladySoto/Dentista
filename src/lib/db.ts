@@ -418,3 +418,29 @@ export async function cobrosSinNombre(ini: number, fin: number) {
   const turnos = await db.turnos.filter((t) => !!t.cobro && (t.fin ?? t.llegada) >= ini && (t.fin ?? t.llegada) < fin).toArray()
   return turnos.filter((t) => t.cobro!.pagado > 0)
 }
+
+/**
+ * Reinicia la sala de espera del día: quita los turnos en espera, en atención y cancelados,
+ * y deja a los atendidos sin número (conservan sus cobros). El próximo turno vuelve a ser el 1.
+ * Devuelve cómo estaban los turnos, para poder deshacer.
+ */
+export async function reiniciarSala(fecha: string) {
+  return db.transaction('rw', db.turnos, async () => {
+    const turnos = await db.turnos.where('fecha').equals(fecha).toArray()
+    const antes = turnos.map((t) => ({ ...t }))
+    await db.turnos.bulkDelete(turnos.filter((t) => t.estado !== 'atendido').map((t) => t.id!))
+    for (const t of turnos) if (t.estado === 'atendido' && t.numero !== 0) await db.turnos.update(t.id!, { numero: 0 })
+    return antes
+  })
+}
+
+/** Deshace un reinicio. Los turnos que llegaron después se numeran a continuación. */
+export async function deshacerReinicio(fecha: string, antes: Turno[]) {
+  await db.transaction('rw', db.turnos, async () => {
+    const ids = new Set(antes.map((t) => t.id))
+    const nuevos = (await db.turnos.where('fecha').equals(fecha).sortBy('llegada')).filter((t) => !ids.has(t.id))
+    let n = Math.max(0, ...antes.map((t) => t.numero))
+    for (const t of nuevos) await db.turnos.update(t.id!, { numero: ++n })
+    await db.turnos.bulkPut(antes)
+  })
+}

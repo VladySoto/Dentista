@@ -1,13 +1,13 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import {
-  AlertTriangle, Banknote, CalendarCheck, CheckCircle2, ChevronRight, Megaphone, Play, Smartphone, Ticket, Undo2, UserPlus, Users, X,
+  AlertTriangle, Banknote, CalendarCheck, CheckCircle2, ChevronRight, Megaphone, Play, RotateCcw, Smartphone, Ticket, Undo2, UserPlus, Users, X,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import PacienteSelector from '../components/PacienteSelector'
 import { IdentificarTurno, TerminarSinNombre } from '../components/TurnoRapido'
 import { Encabezado, Modal, Vacio } from '../components/ui'
-import { cobrosSinNombre, db, hoy, identificarTurno, llamarSiguiente, registrarLlegada, type Paciente, type Turno } from '../lib/db'
+import { cobrosSinNombre, db, deshacerReinicio, hoy, identificarTurno, llamarSiguiente, registrarLlegada, reiniciarSala, type Paciente, type Turno } from '../lib/db'
 import { dinero, duracion, fechaLarga, hora, minutosDesde } from '../lib/format'
 import { useAhora } from '../lib/useAhora'
 
@@ -21,6 +21,8 @@ export default function SalaEspera() {
   const [motivo, setMotivo] = useState('')
   const [ticket, setTicket] = useState<number | null>(null)
   const [aviso, setAviso] = useState<{ numero: number; id: number } | null>(null)
+  const [confirmarReinicio, setConfirmarReinicio] = useState(false)
+  const [reinicio, setReinicio] = useState<Turno[] | null>(null)
   const [identificar, setIdentificar] = useState<Turno | null>(null)
   const [terminar, setTerminar] = useState<Turno | null>(null)
 
@@ -54,6 +56,12 @@ export default function SalaEspera() {
     return () => clearTimeout(t)
   }, [aviso])
 
+  useEffect(() => {
+    if (!reinicio) return
+    const t = setTimeout(() => setReinicio(null), 10_000)
+    return () => clearTimeout(t)
+  }, [reinicio])
+
   if (!datos) return null
   const { turnos, citas, pacientes, cobrado } = datos
   const espera = turnos.filter((t) => t.estado === 'espera')
@@ -70,9 +78,16 @@ export default function SalaEspera() {
   }
 
   async function llegadaRapida() {
+    setReinicio(null) // ya empezó la nueva numeración: no se ofrece deshacer el reinicio
     const numero = await registrarLlegada()
     const t = await db.turnos.where('[fecha+numero]').equals([fecha, numero]).first()
     setAviso({ numero, id: t!.id! })
+  }
+
+  async function reiniciar() {
+    setConfirmarReinicio(false)
+    setAviso(null)
+    setReinicio(await reiniciarSala(fecha))
   }
 
   async function deshacer() {
@@ -115,7 +130,12 @@ export default function SalaEspera() {
 
   return (
     <>
-      <Encabezado titulo="Sala de espera" sub={fechaLarga(Date.now())} />
+      <Encabezado titulo="Sala de espera" sub={fechaLarga(Date.now())}
+        accion={turnos.some((t) => t.estado !== 'atendido' || t.numero > 0) && (
+          <button className="btn-ghost px-3 py-2 text-xs text-slate-500" onClick={() => setConfirmarReinicio(true)}>
+            <RotateCcw size={16} /> Reiniciar
+          </button>
+        )} />
 
       <div className="mb-4 grid grid-cols-3 gap-3">
         <Stat icono={<Users size={18} />} valor={espera.length} label="En espera" />
@@ -201,7 +221,7 @@ export default function SalaEspera() {
           <div className="card divide-y divide-slate-100">
             {atendidos.map((t) => (
               <button key={t.id} onClick={() => abrir(t)} className="flex w-full items-center gap-3 p-3 text-left hover:bg-slate-50">
-                <span className="w-10 text-center text-sm font-bold text-slate-400">#{t.numero}</span>
+                <span className="w-10 text-center text-sm font-bold text-slate-400">{t.numero ? `#${t.numero}` : '—'}</span>
                 <p className="min-w-0 flex-1 truncate">
                   {nombre(t)}
                   {!t.pacienteId && <span className="ml-1 text-xs text-teal-700">· ponerle nombre</span>}
@@ -213,6 +233,37 @@ export default function SalaEspera() {
           </div>
         </section>
       )}
+
+      {reinicio && (
+        <div className="fixed inset-x-4 bottom-24 z-40 mx-auto flex max-w-md items-center gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-white shadow-xl md:bottom-6">
+          <RotateCcw size={20} className="text-amber-300" />
+          <p className="flex-1 text-sm">Sala reiniciada. El próximo turno es el <b className="text-lg">1</b></p>
+          <button className="btn px-3 py-1.5 text-amber-300 hover:bg-white/10" onClick={async () => { const r = reinicio; setReinicio(null); await deshacerReinicio(fecha, r) }}>
+            <Undo2 size={16} /> Deshacer
+          </button>
+        </div>
+      )}
+
+      <Modal abierto={confirmarReinicio} onCerrar={() => setConfirmarReinicio(false)} titulo="¿Reiniciar la sala de espera?">
+        <div className="space-y-4">
+          <ul className="space-y-2 text-sm text-slate-700">
+            {espera.length + atencion.length > 0 && (
+              <li className="flex gap-2"><X size={18} className="shrink-0 text-rose-500" />
+                <span>Se quitarán <b>{espera.length + atencion.length} turno(s)</b>{atencion.length > 0 && <> (incluido el que está en atención)</>}.</span></li>
+            )}
+            {atendidos.length > 0 && (
+              <li className="flex gap-2"><CheckCircle2 size={18} className="shrink-0 text-emerald-600" />
+                <span>Los <b>{atendidos.length} atendido(s)</b> de hoy se conservan con sus cobros.</span></li>
+            )}
+            <li className="flex gap-2"><RotateCcw size={18} className="shrink-0 text-teal-600" /><span>El próximo turno será el <b>1</b>.</span></li>
+            {turnos.some((t) => t.origen === 'qr' && t.estado === 'espera') && (
+              <li className="flex gap-2"><Smartphone size={18} className="shrink-0 text-sky-600" /><span>Quienes tomaron turno con QR verán en su celular que el turno se canceló y podrán tomar uno nuevo.</span></li>
+            )}
+          </ul>
+          <button className="btn-danger w-full" onClick={reiniciar}><RotateCcw size={18} /> Reiniciar desde 1</button>
+          <button className="btn-ghost w-full" onClick={() => setConfirmarReinicio(false)}>Cancelar</button>
+        </div>
+      </Modal>
 
       {aviso && (
         <div className="fixed inset-x-4 bottom-24 z-40 mx-auto flex max-w-md items-center gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-white shadow-xl md:bottom-6">
