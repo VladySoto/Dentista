@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Building2, Check, Cloud, Download, Landmark, Lock, Pill, QrCode, MessageCircle, Plus, ShieldCheck, Smartphone, Stethoscope, Trash2, Upload } from 'lucide-react'
+import { Building2, Check, Clock, Cloud, Download, Landmark, Lock, Pill, QrCode, MessageCircle, Plus, ShieldCheck, Smartphone, Stethoscope, Trash2, Upload } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import AjustesBloqueo from '../components/AjustesBloqueo'
 import AjustesQRPago from '../components/AjustesQRPago'
@@ -34,6 +34,7 @@ export default function Ajustes() {
           <AjustesQRPago />
         </Seccion>
         <Tratamientos />
+        <MotivosTiempos />
         <Medicamentos />
         <Plantillas />
         <Respaldo />
@@ -136,6 +137,78 @@ function Tratamientos() {
         <input className="input w-24" placeholder="Bs" type="number" inputMode="decimal" min="0" value={precio} onChange={(e) => setPrecio(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && agregar()} />
         <button className="btn-soft px-3" onClick={agregar} aria-label="Agregar tratamiento"><Plus size={18} /></button>
       </div>
+    </Seccion>
+  )
+}
+
+/** Promedio real de minutos por motivo, según las atenciones terminadas (con hora de inicio y fin). */
+function usePromediosReales() {
+  return useLiveQuery(async () => {
+    const acum = new Map<string, number[]>()
+    for (const t of await db.turnos.where('estado').equals('atendido').toArray()) {
+      if (!t.inicio || !t.fin || !t.motivo) continue
+      const min = (t.fin - t.inicio) / 60000
+      if (min < 2 || min > 180) continue // descarta olvidos de "terminar"
+      const k = t.motivo.trim().toLowerCase()
+      acum.set(k, [...(acum.get(k) ?? []), min])
+    }
+    return new Map([...acum].map(([k, v]) => [k, { minutos: Math.round(v.reduce((a, b) => a + b, 0) / v.length), veces: v.length }]))
+  }, []) ?? new Map<string, { minutos: number; veces: number }>()
+}
+
+function MotivosTiempos() {
+  const { form, setForm, boton } = useFormConfig()
+  const reales = usePromediosReales()
+  const motivos = form.motivos ?? []
+  const [nuevo, setNuevo] = useState('')
+  const cambiar = (i: number, k: 'nombre' | 'minutos', v: string) =>
+    setForm({ ...form, motivos: motivos.map((m, j) => (j === i ? { ...m, [k]: k === 'minutos' ? Math.max(1, Number(v) || 0) : v } : m)) })
+  const conDatos = motivos.filter((m) => (reales.get(m.nombre.toLowerCase())?.veces ?? 0) >= 3)
+
+  return (
+    <Seccion icono={<Clock size={20} />} titulo="Motivos y tiempos de atención"
+      sub="Cuánto suele durar cada motivo. Con esto se calcula a qué hora le toca a cada paciente (también a quienes tomaron turno con QR).">
+      <div className="divide-y divide-slate-100 rounded-xl border border-slate-200">
+        {motivos.map((m, i) => {
+          const real = reales.get(m.nombre.toLowerCase())
+          return (
+            <div key={i} className="flex items-center gap-2 p-2">
+              <div className="min-w-0 flex-1">
+                <input className="input border-transparent px-2 py-1.5 hover:border-slate-200" value={m.nombre} aria-label="Motivo" onChange={(e) => cambiar(i, 'nombre', e.target.value)} />
+                {real && <p className="px-2 text-xs text-slate-500">Real: {real.minutos} min ({real.veces} atenciones)</p>}
+              </div>
+              <input className="input w-20 border-transparent px-2 py-1.5 text-right hover:border-slate-200" type="number" min="1" inputMode="numeric"
+                value={m.minutos} aria-label={`Minutos de ${m.nombre}`} onChange={(e) => cambiar(i, 'minutos', e.target.value)} />
+              <span className="text-sm text-slate-400">min</span>
+              <button className="btn-ghost p-2 text-slate-400 hover:text-rose-600" aria-label={`Eliminar ${m.nombre}`}
+                onClick={() => setForm({ ...form, motivos: motivos.filter((_, j) => j !== i) })}><Trash2 size={16} /></button>
+            </div>
+          )
+        })}
+      </div>
+      <div className="mt-3 flex gap-2">
+        <input className="input flex-1" placeholder="Nuevo motivo (ej: Prótesis)" value={nuevo} onChange={(e) => setNuevo(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && nuevo.trim()) { setForm({ ...form, motivos: [...motivos, { nombre: nuevo.trim(), minutos: form.minutosPorDefecto ?? 20 }] }); setNuevo('') } }} />
+        <button className="btn-soft px-3" aria-label="Agregar motivo" onClick={() => {
+          if (!nuevo.trim()) return
+          setForm({ ...form, motivos: [...motivos, { nombre: nuevo.trim(), minutos: form.minutosPorDefecto ?? 20 }] }); setNuevo('')
+        }}><Plus size={18} /></button>
+      </div>
+      <div className="mt-3 flex items-center gap-2">
+        <span className="text-sm text-slate-600">Sin motivo o con ficha de papel:</span>
+        <input className="input w-20 px-2 py-1.5 text-right" type="number" min="1" inputMode="numeric" aria-label="Minutos sin motivo"
+          value={form.minutosPorDefecto ?? 20} onChange={(e) => setForm({ ...form, minutosPorDefecto: Math.max(1, Number(e.target.value) || 0) })} />
+        <span className="text-sm text-slate-400">min</span>
+      </div>
+      {conDatos.length > 0 && (
+        <button className="btn-ghost mt-3 px-3 py-1.5 text-xs text-teal-700" onClick={() => setForm({
+          ...form, motivos: motivos.map((m) => {
+            const r = reales.get(m.nombre.toLowerCase())
+            return r && r.veces >= 3 ? { ...m, minutos: Math.max(5, Math.round(r.minutos / 5) * 5) } : m
+          }),
+        })}><Clock size={14} /> Usar los tiempos reales ({conDatos.length} motivo{conDatos.length === 1 ? '' : 's'} con datos)</button>
+      )}
+      {boton}
     </Seccion>
   )
 }

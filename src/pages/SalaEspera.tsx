@@ -7,9 +7,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import PacienteSelector from '../components/PacienteSelector'
 import { IdentificarTurno, TerminarSinNombre } from '../components/TurnoRapido'
 import { Encabezado, Modal, Vacio } from '../components/ui'
-import { cobrosSinNombre, db, deshacerReinicio, hoy, identificarTurno, llamarSiguiente, registrarLlegada, reiniciarSala, type Paciente, type Turno } from '../lib/db'
+import { cobrosSinNombre, db, deshacerReinicio, estimarEsperas, etiquetaTurno, hoy, identificarTurno, llamarSiguiente, numeroVisible, registrarLlegada, reiniciarSala, siguienteFicha, type Paciente, type Turno } from '../lib/db'
 import { dinero, duracion, fechaLarga, hora, minutosDesde } from '../lib/format'
 import { useAhora } from '../lib/useAhora'
+import { useConfig } from '../lib/useConfig'
 
 export default function SalaEspera() {
   const ahora = useAhora()
@@ -20,7 +21,9 @@ export default function SalaEspera() {
   const [elegido, setElegido] = useState<number | null>(null)
   const [motivo, setMotivo] = useState('')
   const [ticket, setTicket] = useState<number | null>(null)
-  const [aviso, setAviso] = useState<{ numero: number; id: number } | null>(null)
+  const [aviso, setAviso] = useState<{ ficha: number; id: number } | null>(null)
+  const [editarFicha, setEditarFicha] = useState<{ id: number; valor: string } | null>(null)
+  const config = useConfig()
   const [confirmarReinicio, setConfirmarReinicio] = useState(false)
   const [reinicio, setReinicio] = useState<Turno[] | null>(null)
   const [identificar, setIdentificar] = useState<Turno | null>(null)
@@ -68,6 +71,7 @@ export default function SalaEspera() {
   const atencion = turnos.filter((t) => t.estado === 'atencion')
   const atendidos = turnos.filter((t) => t.estado === 'atendido')
   const citasPendientes = citas.filter((c) => c.estado === 'pendiente' || c.estado === 'confirmada')
+  const esperas = estimarEsperas(turnos, config, ahora)
   const nombre = (t: Turno) => (t.pacienteId ? pacientes.get(t.pacienteId)?.nombre : undefined) ?? t.nombreLlegada ?? 'Sin identificar'
 
   function cerrar() { setModal(false); setElegido(null); setMotivo(''); setTicket(null) }
@@ -79,9 +83,10 @@ export default function SalaEspera() {
 
   async function llegadaRapida() {
     setReinicio(null) // ya empezó la nueva numeración: no se ofrece deshacer el reinicio
-    const numero = await registrarLlegada()
+    const ficha = await siguienteFicha(fecha)
+    const numero = await registrarLlegada(undefined, undefined, ficha)
     const t = await db.turnos.where('[fecha+numero]').equals([fecha, numero]).first()
-    setAviso({ numero, id: t!.id! })
+    setAviso({ ficha, id: t!.id! })
   }
 
   async function reiniciar() {
@@ -160,7 +165,7 @@ export default function SalaEspera() {
           <div className="rounded-xl bg-white/20 p-3"><Megaphone size={24} /></div>
           <div className="min-w-0 flex-1">
             <p className="text-lg font-bold">Llamar siguiente</p>
-            <p className="truncate text-sm text-teal-50">Turno {proximo.numero} · {nombre(proximo)}</p>
+            <p className="truncate text-sm text-teal-50">{etiquetaTurno(proximo)} · {nombre(proximo)}</p>
           </div>
           <ChevronRight size={24} />
         </button>
@@ -188,8 +193,9 @@ export default function SalaEspera() {
         ) : (
           <div className="space-y-2">
             {espera.map((t, i) => (
-              <TurnoCard key={t.id} t={t} p={t.pacienteId ? pacientes.get(t.pacienteId) : undefined} ahora={ahora} siguiente={i === 0} onAbrir={() => abrir(t)}>
-                <button className="btn-ghost p-2.5" onClick={() => cancelar(t)} aria-label={`Quitar turno ${t.numero}`}><X size={18} /></button>
+              <TurnoCard key={t.id} t={t} p={t.pacienteId ? pacientes.get(t.pacienteId) : undefined} ahora={ahora} siguiente={i === 0}
+                estimado={esperas.get(t.id!)} onAbrir={() => abrir(t)} onNumero={() => setEditarFicha({ id: t.id!, valor: String(t.ficha) })}>
+                <button className="btn-ghost p-2.5" onClick={() => cancelar(t)} aria-label={`Quitar ${etiquetaTurno(t).toLowerCase()}`}><X size={18} /></button>
                 <button className={i === 0 && atencion.length > 0 ? 'btn-primary' : 'btn-soft'} onClick={() => atender(t)}><Play size={16} /> Atender</button>
               </TurnoCard>
             ))}
@@ -221,7 +227,7 @@ export default function SalaEspera() {
           <div className="card divide-y divide-slate-100">
             {atendidos.map((t) => (
               <button key={t.id} onClick={() => abrir(t)} className="flex w-full items-center gap-3 p-3 text-left hover:bg-slate-50">
-                <span className="w-10 text-center text-sm font-bold text-slate-400">{t.numero ? `#${t.numero}` : '—'}</span>
+                <span className="w-10 text-center text-sm font-bold text-slate-400">{numeroVisible(t) ? `${t.ficha ? 'F' : '#'}${numeroVisible(t)}` : '—'}</span>
                 <p className="min-w-0 flex-1 truncate">
                   {nombre(t)}
                   {!t.pacienteId && <span className="ml-1 text-xs text-teal-700">· ponerle nombre</span>}
@@ -268,8 +274,9 @@ export default function SalaEspera() {
       {aviso && (
         <div className="fixed inset-x-4 bottom-24 z-40 mx-auto flex max-w-md items-center gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-white shadow-xl md:bottom-6">
           <Ticket size={20} className="text-amber-300" />
-          <p className="flex-1 text-sm">Turno <b className="text-lg">{aviso.numero}</b> agregado</p>
-          <button className="btn px-3 py-1.5 text-amber-300 hover:bg-white/10" onClick={deshacer}><Undo2 size={16} /> Deshacer</button>
+          <p className="flex-1 text-sm">Ficha <b className="text-lg">{aviso.ficha}</b> agregada</p>
+          <button className="btn px-2.5 py-1.5 text-xs text-white hover:bg-white/10" onClick={() => { setEditarFicha({ id: aviso.id, valor: String(aviso.ficha) }); setAviso(null) }}>Cambiar N°</button>
+          <button className="btn px-2.5 py-1.5 text-amber-300 hover:bg-white/10" onClick={deshacer}><Undo2 size={16} /> Deshacer</button>
         </div>
       )}
 
@@ -285,7 +292,7 @@ export default function SalaEspera() {
         ) : elegido ? (
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
-              {['Dolor', 'Control', 'Limpieza', 'Extracción', 'Curación', 'Ortodoncia', 'Urgencia'].map((m) => (
+              {(config.motivos ?? []).map(({ nombre: m }) => (
                 <button key={m} type="button" onClick={() => setMotivo(m)}
                   className={`chip border px-3 py-1.5 text-sm ${motivo === m ? 'border-teal-600 bg-teal-600 text-white' : 'border-slate-200 bg-white text-slate-600'}`}>{m}</button>
               ))}
@@ -298,7 +305,23 @@ export default function SalaEspera() {
         )}
       </Modal>
 
-      <Modal abierto={!!terminar} onCerrar={() => setTerminar(null)} titulo={`Terminar turno ${terminar?.numero ?? ''}`}>
+      <Modal abierto={!!editarFicha} onCerrar={() => setEditarFicha(null)} titulo="Número de la ficha">
+        {editarFicha && (
+          <form className="space-y-4" onSubmit={async (e) => {
+            e.preventDefault()
+            const n = Number(editarFicha.valor)
+            if (n > 0) await db.turnos.update(editarFicha.id, { ficha: n })
+            setEditarFicha(null)
+          }}>
+            <p className="text-sm text-slate-500">Escribe el número impreso en la ficha que tomó el paciente.</p>
+            <input className="input text-center text-4xl font-bold" type="number" min="1" inputMode="numeric" autoFocus aria-label="Número de ficha"
+              value={editarFicha.valor} onChange={(e) => setEditarFicha({ ...editarFicha, valor: e.target.value })} onFocus={(e) => e.target.select()} />
+            <button className="btn-primary w-full">Guardar</button>
+          </form>
+        )}
+      </Modal>
+
+      <Modal abierto={!!terminar} onCerrar={() => setTerminar(null)} titulo={terminar ? `Terminar ${etiquetaTurno(terminar).toLowerCase()}` : ''}>
         {terminar && (
           <>
             <TerminarSinNombre key={terminar.id} turno={terminar} enEspera={espera.length} onListo={alTerminar} />
@@ -309,7 +332,7 @@ export default function SalaEspera() {
         )}
       </Modal>
 
-      <Modal abierto={!!identificar} onCerrar={() => setIdentificar(null)} titulo={`¿Quién tiene el turno ${identificar?.numero ?? ''}?`}>
+      <Modal abierto={!!identificar} onCerrar={() => setIdentificar(null)} titulo={identificar ? `¿Quién tiene ${identificar.ficha ? `la ficha ${identificar.ficha}` : `el turno ${identificar.numero}`}?` : ''}>
         {identificar && (
           <IdentificarTurno key={identificar.id} turno={identificar} onElegir={alIdentificar}
             onSinNombre={identificar.estado === 'atencion' ? () => setIdentificar(null) : undefined} />
@@ -332,16 +355,24 @@ function Stat({ icono, valor, label }: { icono: React.ReactNode; valor: React.Re
 const Titulo = ({ children }: { children: React.ReactNode }) =>
   <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">{children}</h2>
 
-function TurnoCard({ t, p, ahora, activo, siguiente, onAbrir, children }: {
-  t: Turno; p?: Paciente; ahora: number; activo?: boolean; siguiente?: boolean; onAbrir: () => void; children: React.ReactNode
+function TurnoCard({ t, p, ahora, activo, siguiente, estimado, onAbrir, onNumero, children }: {
+  t: Turno; p?: Paciente; ahora: number; activo?: boolean; siguiente?: boolean
+  /** Minutos aproximados hasta que le toque. */
+  estimado?: number
+  onAbrir: () => void
+  /** Tocar el número de una ficha permite corregirlo. */
+  onNumero?: () => void
+  children: React.ReactNode
 }) {
   const min = minutosDesde(activo ? t.inicio! : t.llegada, ahora)
   const tieneAlerta = !!(p?.alergias || p?.enfermedades)
   return (
     <div className={`card flex items-center gap-3 p-3 ${activo ? 'border-teal-300 bg-teal-50/60 ring-1 ring-teal-200' : siguiente ? 'border-teal-200' : ''}`}>
-      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-lg font-bold ${activo || siguiente ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
-        {t.numero}
-      </div>
+      <button type="button" onClick={t.ficha ? onNumero : undefined} aria-label={etiquetaTurno(t)} disabled={!t.ficha || !onNumero}
+        className={`flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl font-bold leading-none ${activo || siguiente ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+        <span className="text-[9px] font-semibold uppercase opacity-75">{t.ficha ? 'ficha' : 'turno'}</span>
+        <span className="text-lg">{numeroVisible(t)}</span>
+      </button>
       <button onClick={onAbrir} className="min-w-0 flex-1 text-left">
         <p className={`flex items-center gap-1.5 truncate font-semibold ${t.pacienteId || t.nombreLlegada ? '' : 'italic text-slate-400'}`}>
           {t.pacienteId ? p?.nombre ?? '…'
@@ -355,6 +386,11 @@ function TurnoCard({ t, p, ahora, activo, siguiente, onAbrir, children }: {
           {t.motivo && <>{t.motivo} · </>}
           {activo ? `En consultorio hace ${duracion(min)}` : `Llegó ${hora(t.llegada)} · espera ${duracion(min)}`}
         </p>
+        {!activo && estimado !== undefined && (
+          <p className="truncate text-xs font-semibold text-teal-700">
+            {estimado < 3 ? 'Le toca ahora' : `Le toca ≈ ${hora(ahora + estimado * 60000)} (en ${duracion(Math.round(estimado))})`}
+          </p>
+        )}
       </button>
       <div className="flex shrink-0 items-center gap-1">{children}</div>
     </div>

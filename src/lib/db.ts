@@ -64,7 +64,25 @@ export interface Turno {
   telefonoLlegada?: string
   /** Cobro de una atención sin nombre. Al identificar al paciente pasa a ser una consulta suya. */
   cobro?: CobroTurno
+  /** Número impreso en la ficha de papel que tomó el paciente (si llegó con ficha). */
+  ficha?: number
 }
+
+/** Motivo de visita con su duración aproximada (para estimar la espera). */
+export interface Motivo { nombre: string; minutos: number }
+export const MOTIVOS_INICIALES: Motivo[] = [
+  { nombre: 'Dolor', minutos: 30 },
+  { nombre: 'Control', minutos: 15 },
+  { nombre: 'Limpieza', minutos: 30 },
+  { nombre: 'Extracción', minutos: 40 },
+  { nombre: 'Curación', minutos: 30 },
+  { nombre: 'Ortodoncia', minutos: 20 },
+  { nombre: 'Urgencia', minutos: 30 },
+]
+
+/** Cómo se muestra el número de un turno: "Ficha 7" si llegó con ficha de papel, si no "Turno 12". */
+export const etiquetaTurno = (t: Pick<Turno, 'ficha' | 'numero'>) => (t.ficha ? `Ficha ${t.ficha}` : t.numero ? `Turno ${t.numero}` : 'Turno')
+export const numeroVisible = (t: Pick<Turno, 'ficha' | 'numero'>) => t.ficha ?? t.numero
 
 export interface CobroTurno { costo: number; pagado: number; concepto?: string; metodo?: MetodoPago }
 
@@ -173,6 +191,9 @@ export interface Config {
   direccion: string
   horario: string
   mesesControl: number
+  /** Motivos de visita con su duración, y la duración cuando no se sabe el motivo. */
+  motivos?: Motivo[]
+  minutosPorDefecto?: number
   /** Imagen del QR de cobro del banco (data URL) y a nombre de quién está. */
   qrPago?: string
   qrPagoTitular?: string
@@ -189,6 +210,8 @@ export const CONFIG_INICIAL: Config = {
   direccion: '',
   horario: 'Lunes a viernes 8:00–12:00 y 15:00–19:00 · Sábados 8:00–12:00',
   mesesControl: 6,
+  motivos: MOTIVOS_INICIALES,
+  minutosPorDefecto: 20,
   plantillas: {
     cita: 'Hola {nombre} 👋, le recordamos su cita en {consultorio} el {fecha} a las {hora}. ¿Nos confirma su asistencia? 🦷',
     control: 'Hola {nombre} 👋, ya pasaron unos meses desde su última visita a {consultorio}. Le recomendamos venir a su control dental. Atendemos {horario}. 🦷',
@@ -318,14 +341,45 @@ export async function llamarSiguiente() {
   return { ...siguiente, ...cambios }
 }
 
-export async function registrarLlegada(pacienteId?: number, motivo?: string) {
+export async function registrarLlegada(pacienteId?: number, motivo?: string, ficha?: number) {
   const fecha = hoy()
   return db.transaction('rw', db.turnos, async () => {
     const ultimo = await db.turnos.where('[fecha+numero]').between([fecha, 0], [fecha, Infinity]).last()
     const numero = (ultimo?.numero ?? 0) + 1
-    await db.turnos.add({ pacienteId, fecha, numero, motivo, estado: 'espera', llegada: Date.now() })
+    await db.turnos.add({ pacienteId, fecha, numero, motivo, estado: 'espera', llegada: Date.now(), ficha })
     return numero
   })
+}
+
+/** Número de ficha de papel que sigue hoy (la última anotada + 1). */
+export async function siguienteFicha(fecha = hoy()) {
+  const turnos = await db.turnos.where('fecha').equals(fecha).toArray()
+  return Math.max(0, ...turnos.map((t) => t.ficha ?? 0)) + 1
+}
+
+/** Minutos que suele tomar un motivo de visita. */
+export function minutosDe(config: Pick<Config, 'motivos' | 'minutosPorDefecto'>, motivo?: string) {
+  const lista = config.motivos ?? MOTIVOS_INICIALES
+  const m = motivo && lista.find((x) => x.nombre.toLowerCase() === motivo.trim().toLowerCase())
+  return m ? m.minutos : config.minutosPorDefecto ?? 20
+}
+
+/**
+ * Minutos aproximados hasta que le toque a cada turno en espera: lo que le falta al que
+ * está en atención más la duración de los que están antes. Devuelve un Map turnoId → minutos.
+ */
+export function estimarEsperas(turnos: Turno[], config: Pick<Config, 'motivos' | 'minutosPorDefecto'>, ahora = Date.now()) {
+  let acumulado = 0
+  for (const t of turnos.filter((x) => x.estado === 'atencion')) {
+    const transcurrido = (ahora - (t.inicio ?? ahora)) / 60000
+    acumulado = Math.max(acumulado, Math.max(3, minutosDe(config, t.cobro?.concepto ?? t.motivo) - transcurrido))
+  }
+  const res = new Map<number, number>()
+  for (const t of turnos.filter((x) => x.estado === 'espera').sort((a, b) => a.numero - b.numero)) {
+    res.set(t.id!, Math.round(acumulado))
+    acumulado += minutosDe(config, t.motivo)
+  }
+  return res
 }
 
 export async function exportarRespaldo() {
@@ -429,7 +483,7 @@ export async function reiniciarSala(fecha: string) {
     const turnos = await db.turnos.where('fecha').equals(fecha).toArray()
     const antes = turnos.map((t) => ({ ...t }))
     await db.turnos.bulkDelete(turnos.filter((t) => t.estado !== 'atendido').map((t) => t.id!))
-    for (const t of turnos) if (t.estado === 'atendido' && t.numero !== 0) await db.turnos.update(t.id!, { numero: 0 })
+    for (const t of turnos) if (t.estado === 'atendido' && (t.numero !== 0 || t.ficha)) await db.turnos.update(t.id!, { numero: 0, ficha: undefined })
     return antes
   })
 }

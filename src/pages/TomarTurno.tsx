@@ -1,14 +1,30 @@
-import { BellRing, CheckCircle2, Loader2, PartyPopper, XCircle } from 'lucide-react'
+import { BellRing, CheckCircle2, Clock, Loader2, PartyPopper, Timer, XCircle } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { hoy } from '../lib/db'
 import { supabase } from '../lib/supabase'
 
-type Info = { consultorio: string; horario?: string; direccion?: string }
+type Info = { consultorio: string; horario?: string; direccion?: string; motivos?: string[] | null }
 type Guardado = { turno: string; numero: number; fecha: string }
-type Estado = { numero: number; estado: 'espera' | 'atencion' | 'atendido' | 'cancelado'; antes: number; atendiendo: number | null }
+type Estado = {
+  numero: number; estado: 'espera' | 'atencion' | 'atendido' | 'cancelado'; antes: number
+  /** "Ficha 3" o "Turno 12" (versiones anteriores: solo el número). */
+  atendiendo: string | number | null
+  espera_min?: number; duracion_min?: number
+}
 
-const MOTIVOS = ['Dolor', 'Control', 'Limpieza', 'Extracción', 'Curación', 'Urgencia', 'Otro']
+const MOTIVOS = ['Dolor', 'Control', 'Limpieza', 'Extracción', 'Curación', 'Urgencia']
+
+/** "unos 35 min" / "1 h 10 min", redondeado a 5 minutos para no prometer exactitud. */
+function aproximado(min: number) {
+  const m = Math.max(5, Math.round(min / 5) * 5)
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}`
+}
+const horaAprox = (min: number) => {
+  const d = new Date(Date.now() + min * 60000)
+  d.setMinutes(Math.round(d.getMinutes() / 5) * 5, 0, 0)
+  return d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
+}
 
 const leer = (codigo: string): Guardado | null => {
   try {
@@ -46,14 +62,14 @@ export default function TomarTurno() {
         ) : mio ? (
           <MiTurno codigo={codigo} mio={mio} onOtro={() => { guardar(codigo, null); setMio(null) }} />
         ) : (
-          <Formulario codigo={codigo} onListo={(g) => { guardar(codigo, g); setMio(g) }} />
+          <Formulario codigo={codigo} motivos={info.motivos?.length ? info.motivos : MOTIVOS} onListo={(g) => { guardar(codigo, g); setMio(g) }} />
         )}
       </div>
     </div>
   )
 }
 
-function Formulario({ codigo, onListo }: { codigo: string; onListo: (g: Guardado) => void }) {
+function Formulario({ codigo, motivos, onListo }: { codigo: string; motivos: string[]; onListo: (g: Guardado) => void }) {
   const [f, setF] = useState({ nombre: '', documento: '', telefono: '', motivo: '' })
   const [error, setError] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -89,7 +105,7 @@ function Formulario({ codigo, onListo }: { codigo: string; onListo: (g: Guardado
       <fieldset>
         <legend className="mb-2 font-semibold">¿Por qué viene hoy?</legend>
         <div className="grid grid-cols-2 gap-2">
-          {MOTIVOS.map((m) => (
+          {[...motivos, 'Otro'].map((m) => (
             <button key={m} type="button" onClick={() => setF({ ...f, motivo: f.motivo === m ? '' : m })}
               className={`rounded-2xl border-2 py-3 font-semibold transition ${f.motivo === m ? 'border-teal-600 bg-teal-600 text-white' : 'border-slate-200 bg-white text-slate-700'}`}>{m}</button>
           ))}
@@ -161,8 +177,25 @@ function MiTurno({ codigo, mio, onOtro }: { codigo: string; mio: Guardado; onOtr
         <p className="text-2xl font-bold">
           {!e ? 'Consultando…' : e.antes === 0 ? 'Usted es el siguiente' : e.antes === 1 ? 'Falta 1 persona' : `Faltan ${e.antes} personas`}
         </p>
-        {e?.atendiendo != null && <p className="mt-2 text-base text-slate-500">Ahora atendiendo: turno {e.atendiendo}</p>}
+        {e?.atendiendo != null && <p className="mt-2 text-base text-slate-500">Ahora atendiendo: {typeof e.atendiendo === 'number' ? `turno ${e.atendiendo}` : e.atendiendo.toLowerCase()}</p>}
       </div>
+      {e?.espera_min != null && (
+        <div className="grid grid-cols-2 gap-3 text-left">
+          <div className="rounded-2xl bg-white p-4 shadow-sm">
+            <Clock size={22} className="mb-1 text-teal-600" />
+            <p className="text-sm text-slate-500">Le toca aprox.</p>
+            <p className="text-2xl font-bold">{e.antes === 0 && e.espera_min < 5 ? 'Ya' : horaAprox(e.espera_min)}</p>
+            <p className="text-sm text-slate-500">{e.antes === 0 && e.espera_min < 5 ? 'en cualquier momento' : `en unos ${aproximado(e.espera_min)}`}</p>
+          </div>
+          <div className="rounded-2xl bg-white p-4 shadow-sm">
+            <Timer size={22} className="mb-1 text-teal-600" />
+            <p className="text-sm text-slate-500">Su atención dura</p>
+            <p className="text-2xl font-bold">{aproximado(e.duracion_min ?? 20)}</p>
+            <p className="text-sm text-slate-500">aproximadamente</p>
+          </div>
+        </div>
+      )}
+      {e?.espera_min != null && <p className="text-sm text-slate-500">Son tiempos aproximados: pueden cambiar según cada atención.</p>}
       {!avisos ? (
         <button onClick={activarAvisos} className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-teal-600 bg-white py-4 text-lg font-bold text-teal-700">
           <BellRing /> Avisarme cuando me toque
@@ -170,7 +203,7 @@ function MiTurno({ codigo, mio, onOtro }: { codigo: string; mio: Guardado; onOtr
       ) : (
         <p className="flex items-center justify-center gap-2 rounded-2xl bg-teal-50 p-3 text-base text-teal-800"><BellRing size={20} /> Le avisaremos con sonido y vibración</p>
       )}
-      <p className="text-base text-slate-500">Deje esta página abierta. Se actualiza sola.</p>
+      <p className="text-base text-slate-500">Deje esta página abierta: se actualiza sola. El dentista lo llamará por su nombre.</p>
       <button className="text-sm text-slate-400 underline" onClick={() => confirm('¿Tomar un turno nuevo? Este número ya no se mostrará aquí.') && onOtro()}>Tomar otro turno</button>
     </div>
   )

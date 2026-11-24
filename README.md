@@ -28,6 +28,8 @@ Pensada para un dentista que trabaja solo: la app le ahorra pasos entre paciente
 - **Odontograma** adulto, mixto e infantil, por caras del diente y con historial por fecha.
 - **Cobro con QR del banco** y **recibos de pago en PDF** con el monto en letras.
 - **Gastos y ganancia**, **inventario de materiales** con avisos, y **reportes mensuales** con exportación a Excel (CSV).
+- **Tiempo estimado**: cada turno muestra a qué hora le toca; quien tomó turno con QR ve en su celular la hora aproximada y cuánto dura su atención. Los minutos por motivo se editan en Ajustes.
+- **Fichas de papel con su número**: "+1 llegada" anota el número de la ficha (sugiere el siguiente) para no mezclarlo con los turnos del QR.
 - **Copia semanal a Google Drive**: aviso en la sala de espera y guardado con el menú de compartir.
 - **Nube (opcional)**: con una cuenta, los datos se sincronizan entre celular, PC y tablet. Funciona sin internet y sube los cambios después.
 
@@ -35,7 +37,7 @@ Pensada para un dentista que trabaja solo: la app le ahorra pasos entre paciente
 React 18 + TypeScript, Vite, Tailwind CSS, Dexie (IndexedDB), vite-plugin-pwa, Supabase (nube, cuentas y archivos), jsPDF, Vercel (publicación).
 
 ## Nube (Supabase)
-1. En Supabase → **SQL Editor** → pegar y ejecutar `supabase/schema.sql` luego `supabase/02-turnos-qr.sql` y `supabase/03-fotos.sql`.
+1. En Supabase → **SQL Editor** → pegar y ejecutar `supabase/schema.sql` luego `supabase/02-turnos-qr.sql`, `supabase/03-fotos.sql` y `supabase/04-tiempo-estimado.sql`.
 2. La URL y la llave *publishable* del proyecto están en `src/lib/supabase.ts`
    (se pueden cambiar con `VITE_SUPABASE_URL` y `VITE_SUPABASE_KEY`).
 3. Cada usuario solo puede ver sus propios registros (Row Level Security).
