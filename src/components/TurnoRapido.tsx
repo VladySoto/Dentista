@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Check, ChevronRight, Search, UserPlus, UserX } from 'lucide-react'
+import { Check, ChevronRight, Search, SkipForward, UserPlus, UserX } from 'lucide-react'
 import { useState } from 'react'
 import { db, type MetodoPago, type Turno } from '../lib/db'
 import { dinero, normalizar } from '../lib/format'
@@ -10,11 +10,13 @@ import { Avatar } from './ui'
  * Identificar al paciente de un turno en un toque: buscar, crear solo con el nombre,
  * o seguir sin nombre. Nada es obligatorio.
  */
-export function IdentificarTurno({ turno, onElegir, onSinNombre }: {
+export function IdentificarTurno({ turno, onElegir, onSinNombre, onNoVino }: {
   turno: Turno
   onElegir: (pacienteId: number) => void
   /** Si se pasa, aparece "Atender sin nombre". */
   onSinNombre?: () => void
+  /** Si se pasa, aparece "No vino" (la ficha llamada no se presentó). */
+  onNoVino?: () => void
 }) {
   const [q, setQ] = useState('')
   const texto = q.trim()
@@ -80,15 +82,21 @@ export function IdentificarTurno({ turno, onElegir, onSinNombre }: {
           <UserX size={18} /> Atender sin nombre
         </button>
       )}
+      {onNoVino && (
+        <button onClick={onNoVino} className="btn-ghost w-full text-slate-500">
+          <SkipForward size={18} /> No vino: llamar la ficha {turno.numero + 1}
+        </button>
+      )}
       <p className="text-center text-xs text-slate-400">Los datos completos se pueden agregar después en la ficha.</p>
     </div>
   )
 }
 
 /** Terminar una atención sin nombre: qué se hizo y cuánto pagó, en segundos. */
-export function TerminarSinNombre({ turno, enEspera, onListo }: {
+export function TerminarSinNombre({ turno, siguienteFicha, onListo }: {
   turno: Turno
-  enEspera: number
+  /** Número de la ficha que se llamaría después (0 = no ofrecer). */
+  siguienteFicha: number
   onListo: (siguiente: boolean) => void
 }) {
   const tratamientos = useLiveQuery(() => db.tratamientos.orderBy('nombre').toArray(), [])
@@ -141,12 +149,12 @@ export function TerminarSinNombre({ turno, enEspera, onListo }: {
       {p > 0 && <MetodoSelector valor={metodo} onChange={setMetodo} />}
       {c > p && <p className="text-sm font-semibold text-rose-600">Queda debiendo Bs {dinero(c - p)}: ponle nombre para guardarlo en su ficha.</p>}
       <div className="space-y-2 pt-1">
-        {enEspera > 0 && (
+        {siguienteFicha > 0 && (
           <button className="btn-primary w-full py-3.5" onClick={() => terminar(true)}>
-            Terminar y llamar siguiente <ChevronRight size={18} /><span className="chip bg-white/20 text-white">{enEspera} en espera</span>
+            Terminar y llamar ficha {siguienteFicha} <ChevronRight size={18} />
           </button>
         )}
-        <button className={`${enEspera > 0 ? 'btn-soft' : 'btn-primary'} w-full`} onClick={() => terminar(false)}>Terminar</button>
+        <button className={`${siguienteFicha > 0 ? 'btn-soft' : 'btn-primary'} w-full`} onClick={() => terminar(false)}>Terminar</button>
       </div>
     </div>
   )

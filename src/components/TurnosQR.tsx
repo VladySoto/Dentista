@@ -30,7 +30,7 @@ export default function TurnosQR() {
       <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
         {qr && <img src={qr} alt="QR para tomar turno" className="w-44 rounded-xl border border-slate-200 p-1" />}
         <div className="min-w-0 flex-1 space-y-2">
-          <p className="text-sm text-slate-600">Los pacientes escanean este código, escriben su nombre y reciben su número. Aparecen solos en la sala de espera.</p>
+          <p className="text-sm text-slate-600">Los pacientes toman su ficha de papel, escanean este código y escriben el número de su ficha: ven cuánto les falta y les avisa cuando los llaman. Aparecen con su nombre en la sala de espera.</p>
           <p className="break-all rounded-lg bg-slate-50 px-3 py-2 font-mono text-xs text-slate-500">{url}</p>
           <div className="flex flex-wrap gap-2">
             <Link to="/cartel" className="btn-primary px-3 py-2"><Printer size={16} /> Imprimir cartel</Link>

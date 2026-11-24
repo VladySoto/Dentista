@@ -12,7 +12,7 @@ import Odontograma from '../components/Odontograma'
 import PacienteForm from '../components/PacienteForm'
 import { Avatar, Campo, Modal, Vacio } from '../components/ui'
 import {
-  avisoWhatsApp, calcularSaldo, db, enlaceWhatsApp, hoy, llamarSiguiente, METODOS, numeroVisible, varsPlantilla, type Consulta, type MetodoPago, type Paciente, type Pago,
+  avisoWhatsApp, calcularSaldo, db, enlaceWhatsApp, hoy, llamarSiguiente, METODOS, numeroVisible, ultimoLlamado, varsPlantilla, type Consulta, type MetodoPago, type Paciente, type Pago,
 } from '../lib/db'
 import { dinero, duracion, edad, fechaCorta, fechaLarga, hora, minutosDesde } from '../lib/format'
 import { borrarImagen } from '../lib/archivos'
@@ -49,7 +49,7 @@ export default function PacienteDetalle() {
     const turnos = await db.turnos.where('fecha').equals(hoy()).toArray()
     return {
       activo: turnos.find((t) => t.pacienteId === id && t.estado === 'atencion'),
-      enEspera: turnos.filter((t) => t.estado === 'espera').length,
+      siguienteFicha: ultimoLlamado(turnos) + 1,
     }
   }, [id])
 
@@ -103,7 +103,7 @@ export default function PacienteDetalle() {
         <div className="mb-4 rounded-2xl bg-gradient-to-br from-teal-600 to-cyan-700 p-4 text-white shadow-lg shadow-teal-700/20">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 flex-col items-center justify-center rounded-xl bg-white/20 font-bold leading-none">
-              <span className="text-[9px] uppercase opacity-80">{turno.ficha ? 'ficha' : 'turno'}</span>
+              <span className="text-[9px] uppercase opacity-80">{turno.numero ? 'ficha' : 'cita'}</span>
               <span className="text-xl">{numeroVisible(turno)}</span>
             </div>
             <div className="min-w-0 flex-1">
@@ -280,7 +280,7 @@ export default function PacienteDetalle() {
             pacienteId={id}
             inicial={modalConsulta.modo === 'editar' ? modalConsulta.consulta : undefined}
             motivoInicial={modalConsulta.modo === 'turno' ? turno?.motivo ?? '' : ''}
-            enEspera={modalConsulta.modo === 'turno' ? fila?.enEspera ?? 0 : undefined}
+            siguienteFicha={modalConsulta.modo === 'turno' ? fila?.siguienteFicha ?? 0 : undefined}
             onGuardado={alGuardarConsulta} />
         )}
         {modalConsulta?.modo === 'editar' && (

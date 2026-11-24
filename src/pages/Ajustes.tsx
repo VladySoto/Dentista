@@ -195,7 +195,7 @@ function MotivosTiempos() {
         }}><Plus size={18} /></button>
       </div>
       <div className="mt-3 flex items-center gap-2">
-        <span className="text-sm text-slate-600">Sin motivo o con ficha de papel:</span>
+        <span className="text-sm text-slate-600">Fichas sin motivo o no anotadas:</span>
         <input className="input w-20 px-2 py-1.5 text-right" type="number" min="1" inputMode="numeric" aria-label="Minutos sin motivo"
           value={form.minutosPorDefecto ?? 20} onChange={(e) => setForm({ ...form, minutosPorDefecto: Math.max(1, Number(e.target.value) || 0) })} />
         <span className="text-sm text-slate-400">min</span>

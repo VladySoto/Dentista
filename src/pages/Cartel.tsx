@@ -26,15 +26,17 @@ export default function Cartel() {
           <img src="/icon.svg" alt="" className="h-14 w-14" />
           <p className="text-3xl font-bold text-slate-800">{config.consultorio}</p>
         </div>
-        <h1 className="mt-[6%] text-5xl font-black leading-tight text-teal-700">Tome su turno<br />con su celular</h1>
-        {qr && <img src={qr} alt="Código QR para tomar turno" className="my-[5%] w-[62%] rounded-2xl border-8 border-teal-600 p-2" />}
+        <h1 className="mt-[6%] text-5xl font-black leading-tight text-teal-700">1. Tome una ficha 🎫</h1>
+        <p className="mt-3 text-2xl text-slate-600">Espere a que llamen su número.</p>
+        <h2 className="mt-[5%] text-3xl font-bold text-slate-800">2. ¿Tiene celular? Vea cuánto le falta</h2>
+        {qr && <img src={qr} alt="Código QR para tomar turno" className="my-[4%] w-[52%] rounded-2xl border-8 border-teal-600 p-2" />}
         <ol className="space-y-2 text-left text-2xl text-slate-700">
-          <li><b className="text-teal-700">1.</b> Abra la cámara y apunte al código</li>
-          <li><b className="text-teal-700">2.</b> Escriba su nombre</li>
-          <li><b className="text-teal-700">3.</b> Espere su número en pantalla</li>
+          <li>📷 Apunte la cámara al código</li>
+          <li>🔢 Escriba el número de su ficha y su nombre</li>
+          <li>🔔 Le avisamos cuando le toque</li>
         </ol>
-        <p className="mt-auto rounded-2xl bg-amber-50 px-6 py-4 text-2xl font-semibold text-amber-900">
-          ¿No tiene celular? Tome una ficha numerada 🎫
+        <p className="mt-auto rounded-2xl bg-amber-50 px-6 py-4 text-xl font-semibold text-amber-900">
+          Sin celular también se atiende igual: solo guarde su ficha.
         </p>
         {config.horario && <p className="mt-4 text-lg text-slate-500">{config.horario}</p>}
       </div>

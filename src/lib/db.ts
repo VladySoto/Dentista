@@ -64,7 +64,7 @@ export interface Turno {
   telefonoLlegada?: string
   /** Cobro de una atención sin nombre. Al identificar al paciente pasa a ser una consulta suya. */
   cobro?: CobroTurno
-  /** Número impreso en la ficha de papel que tomó el paciente (si llegó con ficha). */
+  /** (Versión anterior) número de ficha aparte. Ahora el número de ficha es `numero`. */
   ficha?: number
 }
 
@@ -81,8 +81,12 @@ export const MOTIVOS_INICIALES: Motivo[] = [
 ]
 
 /** Cómo se muestra el número de un turno: "Ficha 7" si llegó con ficha de papel, si no "Turno 12". */
-export const etiquetaTurno = (t: Pick<Turno, 'ficha' | 'numero'>) => (t.ficha ? `Ficha ${t.ficha}` : t.numero ? `Turno ${t.numero}` : 'Turno')
-export const numeroVisible = (t: Pick<Turno, 'ficha' | 'numero'>) => t.ficha ?? t.numero
+/**
+ * El número de un turno es el de la FICHA DE PAPEL que tomó el paciente (un solo número para todos).
+ * Número 0 = llegó sin ficha (por ejemplo, con cita).
+ */
+export const etiquetaTurno = (t: Pick<Turno, 'numero'>) => (t.numero ? `Ficha ${t.numero}` : 'Sin ficha')
+export const numeroVisible = (t: Pick<Turno, 'numero'>) => t.numero
 
 export interface CobroTurno { costo: number; pagado: number; concepto?: string; metodo?: MetodoPago }
 
@@ -332,29 +336,51 @@ export function calcularSaldo(consultas: Consulta[], pagos: Pago[]) {
   return Math.max(0, deuda - pagos.reduce((s, p) => s + p.monto, 0))
 }
 
-/** Pasa a atención al siguiente de la fila de hoy. Devuelve su turno o null. */
-export async function llamarSiguiente() {
-  const siguiente = (await db.turnos.where('fecha').equals(hoy()).sortBy('numero')).find((t) => t.estado === 'espera')
-  if (!siguiente) return null
-  const cambios = { estado: 'atencion' as const, inicio: Date.now() }
-  await db.turnos.update(siguiente.id!, cambios)
-  return { ...siguiente, ...cambios }
+/** Última ficha llamada hoy: la mayor en atención, atendida o que no vino. 0 si todavía no se llamó ninguna. */
+export function ultimoLlamado(turnos: Turno[]) {
+  return Math.max(0, ...turnos.filter((t) => t.numero > 0 && t.estado !== 'espera').map((t) => t.numero))
 }
 
-export async function registrarLlegada(pacienteId?: number, motivo?: string, ficha?: number) {
-  const fecha = hoy()
+/**
+ * Llama a la ficha que sigue (la última llamada + 1). Si esa ficha estaba registrada (por QR o por el
+ * dentista) se usa su turno; si no, se crea un turno sin nombre. Devuelve el turno en atención.
+ */
+export async function llamarSiguiente(fecha = hoy()) {
   return db.transaction('rw', db.turnos, async () => {
-    const ultimo = await db.turnos.where('[fecha+numero]').between([fecha, 0], [fecha, Infinity]).last()
-    const numero = (ultimo?.numero ?? 0) + 1
-    await db.turnos.add({ pacienteId, fecha, numero, motivo, estado: 'espera', llegada: Date.now(), ficha })
-    return numero
+    const turnos = await db.turnos.where('fecha').equals(fecha).toArray()
+    const numero = ultimoLlamado(turnos) + 1
+    const cambios = { estado: 'atencion' as const, inicio: Date.now() }
+    const existente = turnos.find((t) => t.numero === numero)
+    if (existente) {
+      await db.turnos.update(existente.id!, cambios)
+      return { ...existente, ...cambios }
+    }
+    const nuevo: Turno = { fecha, numero, estado: 'atencion', llegada: Date.now(), inicio: cambios.inicio }
+    nuevo.id = (await db.turnos.add(nuevo)) as number
+    return nuevo
   })
 }
 
-/** Número de ficha de papel que sigue hoy (la última anotada + 1). */
-export async function siguienteFicha(fecha = hoy()) {
-  const turnos = await db.turnos.where('fecha').equals(fecha).toArray()
-  return Math.max(0, ...turnos.map((t) => t.ficha ?? 0)) + 1
+/** La ficha llamada no se presentó: queda como "no vino" (cancelado) y se puede llamar a la siguiente. */
+export const noVino = (turnoId: number) => db.turnos.update(turnoId, { estado: 'cancelado', fin: Date.now() })
+
+/**
+ * Anota a un paciente que llegó. `numero` es el de su ficha de papel (0 si no tiene, por ejemplo una cita).
+ * Si esa ficha ya estaba anotada sin nombre, se le agregan los datos. Devuelve el id del turno.
+ */
+export async function registrarLlegada(pacienteId?: number, motivo?: string, numero = 0) {
+  const fecha = hoy()
+  return db.transaction('rw', db.turnos, async () => {
+    if (numero > 0) {
+      const existente = await db.turnos.where('[fecha+numero]').equals([fecha, numero]).first()
+      if (existente) {
+        if (existente.pacienteId && pacienteId && existente.pacienteId !== pacienteId) throw new Error(`La ficha ${numero} ya está anotada a otro paciente.`)
+        await db.turnos.update(existente.id!, { pacienteId: pacienteId ?? existente.pacienteId, motivo: motivo ?? existente.motivo })
+        return existente.id!
+      }
+    }
+    return (await db.turnos.add({ pacienteId, fecha, numero, motivo, estado: 'espera', llegada: Date.now() })) as number
+  })
 }
 
 /** Minutos que suele tomar un motivo de visita. */
@@ -369,15 +395,25 @@ export function minutosDe(config: Pick<Config, 'motivos' | 'minutosPorDefecto'>,
  * está en atención más la duración de los que están antes. Devuelve un Map turnoId → minutos.
  */
 export function estimarEsperas(turnos: Turno[], config: Pick<Config, 'motivos' | 'minutosPorDefecto'>, ahora = Date.now()) {
-  let acumulado = 0
+  // Lo que le falta al que está en atención
+  let restante = 0
   for (const t of turnos.filter((x) => x.estado === 'atencion')) {
     const transcurrido = (ahora - (t.inicio ?? ahora)) / 60000
-    acumulado = Math.max(acumulado, Math.max(3, minutosDe(config, t.cobro?.concepto ?? t.motivo) - transcurrido))
+    restante = Math.max(restante, Math.max(3, minutosDe(config, t.cobro?.concepto ?? t.motivo) - transcurrido))
   }
+  // Para cada ficha anotada que todavía no se llamó: las fichas de en medio cuentan con su motivo si están
+  // anotadas, no cuentan si ya pasaron, y si no están anotadas cuentan con el tiempo por defecto
+  const ultimo = ultimoLlamado(turnos)
+  const porNumero = new Map(turnos.filter((t) => t.numero > 0).map((t) => [t.numero, t]))
   const res = new Map<number, number>()
-  for (const t of turnos.filter((x) => x.estado === 'espera').sort((a, b) => a.numero - b.numero)) {
-    res.set(t.id!, Math.round(acumulado))
-    acumulado += minutosDe(config, t.motivo)
+  for (const t of turnos.filter((x) => x.estado === 'espera' && x.numero > ultimo)) {
+    let min = restante
+    for (let k = ultimo + 1; k < t.numero; k++) {
+      const otro = porNumero.get(k)
+      if (!otro) min += config.minutosPorDefecto ?? 20
+      else if (otro.estado === 'espera') min += minutosDe(config, otro.motivo)
+    }
+    res.set(t.id!, Math.round(min))
   }
   return res
 }
@@ -483,7 +519,7 @@ export async function reiniciarSala(fecha: string) {
     const turnos = await db.turnos.where('fecha').equals(fecha).toArray()
     const antes = turnos.map((t) => ({ ...t }))
     await db.turnos.bulkDelete(turnos.filter((t) => t.estado !== 'atendido').map((t) => t.id!))
-    for (const t of turnos) if (t.estado === 'atendido' && (t.numero !== 0 || t.ficha)) await db.turnos.update(t.id!, { numero: 0, ficha: undefined })
+    for (const t of turnos) if (t.estado === 'atendido' && t.numero !== 0) await db.turnos.update(t.id!, { numero: 0 })
     return antes
   })
 }

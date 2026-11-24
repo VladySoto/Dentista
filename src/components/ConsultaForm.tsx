@@ -7,12 +7,12 @@ import { useConfig } from '../lib/useConfig'
 import { BotonCobrarQR, MetodoSelector } from './Cobro'
 import { Campo } from './ui'
 
-export default function ConsultaForm({ pacienteId, inicial, motivoInicial = '', enEspera, onGuardado }: {
+export default function ConsultaForm({ pacienteId, inicial, motivoInicial = '', siguienteFicha, onGuardado }: {
   pacienteId: number
   inicial?: Consulta
   motivoInicial?: string
   /** Si viene de la fila: cuántos esperan (muestra "Guardar y llamar siguiente"). */
-  enEspera?: number
+  siguienteFicha?: number
   onGuardado: (c: Consulta, siguiente: boolean) => void
 }) {
   const config = useConfig()
@@ -105,14 +105,14 @@ export default function ConsultaForm({ pacienteId, inicial, motivoInicial = '', 
         </span>
       </label>
 
-      {enEspera !== undefined ? (
+      {siguienteFicha !== undefined ? (
         <div className="space-y-2">
-          {enEspera > 0 && (
+          {siguienteFicha > 0 && (
             <button type="button" className="btn-primary w-full py-3.5" onClick={(e) => guardar(e, true)}>
-              Guardar y llamar siguiente <ChevronRight size={18} /><span className="chip bg-white/20 text-white">{enEspera} en espera</span>
+              Guardar y llamar ficha {siguienteFicha} <ChevronRight size={18} />
             </button>
           )}
-          <button className={`${enEspera > 0 ? 'btn-soft' : 'btn-primary'} w-full`}>Guardar y volver a la sala</button>
+          <button className={`${siguienteFicha > 0 ? 'btn-soft' : 'btn-primary'} w-full`}>Guardar y volver a la sala</button>
         </div>
       ) : (
         <button className="btn-primary w-full">{inicial ? 'Guardar cambios' : 'Guardar consulta'}</button>

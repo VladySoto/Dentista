@@ -1,4 +1,4 @@
-import { BellRing, CheckCircle2, Clock, Loader2, PartyPopper, Timer, XCircle } from 'lucide-react'
+import { AlertCircle, BellRing, CheckCircle2, Clock, Loader2, PartyPopper, Timer, XCircle } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { hoy } from '../lib/db'
@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase'
 type Info = { consultorio: string; horario?: string; direccion?: string; motivos?: string[] | null }
 type Guardado = { turno: string; numero: number; fecha: string }
 type Estado = {
-  numero: number; estado: 'espera' | 'atencion' | 'atendido' | 'cancelado'; antes: number
+  numero: number; estado: 'espera' | 'atencion' | 'atendido' | 'cancelado' | 'pasado'; antes: number
   /** "Ficha 3" o "Turno 12" (versiones anteriores: solo el número). */
   atendiendo: string | number | null
   espera_min?: number; duracion_min?: number
@@ -70,7 +70,7 @@ export default function TomarTurno() {
 }
 
 function Formulario({ codigo, motivos, onListo }: { codigo: string; motivos: string[]; onListo: (g: Guardado) => void }) {
-  const [f, setF] = useState({ nombre: '', documento: '', telefono: '', motivo: '' })
+  const [f, setF] = useState({ ficha: '', nombre: '', documento: '', telefono: '', motivo: '' })
   const [error, setError] = useState('')
   const [enviando, setEnviando] = useState(false)
 
@@ -78,7 +78,7 @@ function Formulario({ codigo, motivos, onListo }: { codigo: string; motivos: str
     e.preventDefault()
     setEnviando(true); setError('')
     const { data, error } = await supabase.rpc('tomar_turno', {
-      p_codigo: codigo, p_fecha: hoy(), p_nombre: f.nombre, p_documento: f.documento, p_telefono: f.telefono, p_motivo: f.motivo,
+      p_codigo: codigo, p_fecha: hoy(), p_ficha: Number(f.ficha), p_nombre: f.nombre, p_documento: f.documento, p_telefono: f.telefono, p_motivo: f.motivo,
     })
     setEnviando(false)
     if (error) return setError(/fetch|network/i.test(error.message) ? 'No hay internet. Intente de nuevo o tome una ficha en la puerta.' : error.message)
@@ -89,7 +89,13 @@ function Formulario({ codigo, motivos, onListo }: { codigo: string; motivos: str
   const input = 'w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3.5 text-lg outline-none focus:border-teal-500'
   return (
     <form onSubmit={enviar} className="space-y-5">
-      <h1 className="text-3xl font-bold">Tome su turno</h1>
+      <h1 className="text-3xl font-bold">Vea cuánto le falta</h1>
+      <label className="block rounded-2xl bg-amber-50 p-4">
+        <span className="mb-1.5 block font-semibold">Número de su ficha de papel *</span>
+        <input className="w-full rounded-2xl border-2 border-slate-300 bg-white px-4 py-3 text-center text-4xl font-black outline-none focus:border-teal-500" type="number" min="1" max="999" inputMode="numeric" required
+          value={f.ficha} onChange={(e) => setF({ ...f, ficha: e.target.value })} />
+        <span className="mt-1.5 block text-sm text-amber-800">¿No tiene ficha? Tome una en la entrada.</span>
+      </label>
       <label className="block">
         <span className="mb-1.5 block font-semibold">Su nombre y apellido *</span>
         <input className={input} required minLength={2} maxLength={80} autoComplete="name" value={f.nombre} onChange={(e) => setF({ ...f, nombre: e.target.value })} />
@@ -113,7 +119,7 @@ function Formulario({ codigo, motivos, onListo }: { codigo: string; motivos: str
       </fieldset>
       {error && <p className="rounded-2xl bg-rose-50 p-4 text-base font-medium text-rose-700">{error}</p>}
       <button disabled={enviando} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-600 py-4 text-xl font-bold text-white shadow-lg shadow-teal-600/30 active:scale-[.98] disabled:opacity-60">
-        {enviando ? <><Loader2 className="animate-spin" /> Un momento…</> : 'Tomar turno'}
+        {enviando ? <><Loader2 className="animate-spin" /> Un momento…</> : 'Registrar mi ficha'}
       </button>
     </form>
   )
@@ -142,10 +148,10 @@ function MiTurno({ codigo, mio, onOtro }: { codigo: string; mio: Guardado; onOtr
     if (!e) return
     if (e.estado === 'atencion' && !avisado.current.turno) {
       avisado.current.turno = true
-      avisar(`¡Es su turno! Turno ${e.numero}`, 'Pase al consultorio.')
+      avisar(`¡Es su turno! Ficha ${e.numero}`, 'Pase al consultorio.')
     } else if (e.estado === 'espera' && e.antes <= 2 && !avisado.current.cerca) {
       avisado.current.cerca = true
-      if (e.antes > 0) avisar(`Ya casi es su turno (${e.numero})`, e.antes === 1 ? 'Falta 1 persona.' : `Faltan ${e.antes} personas.`)
+      if (e.antes > 0) avisar(`Ya casi es su turno (ficha ${e.numero})`, e.antes === 1 ? 'Falta 1 ficha.' : `Faltan ${e.antes} fichas.`)
     }
   }, [e])
 
@@ -167,17 +173,18 @@ function MiTurno({ codigo, mio, onOtro }: { codigo: string; mio: Guardado; onOtr
     </div>
   )
   if (estado === 'atendido') return <Aviso icono={<CheckCircle2 size={56} className="text-teal-600" />} titulo="¡Gracias por su visita!" texto="Su atención ya terminó." accion={<button className="mt-6 text-base text-teal-700 underline" onClick={onOtro}>Tomar un turno nuevo</button>} />
-  if (estado === 'cancelado') return <Aviso icono={<XCircle size={56} className="text-slate-400" />} titulo="Turno cancelado" texto="Si todavía necesita atención, tome un turno nuevo." accion={<button className="mt-6 w-full rounded-2xl bg-teal-600 py-4 text-xl font-bold text-white" onClick={onOtro}>Tomar turno</button>} />
+  if (estado === 'cancelado') return <Aviso icono={<XCircle size={56} className="text-slate-400" />} titulo="Registro cancelado" texto="La sala se reinició o su ficha se quitó de la lista. Si todavía espera, registre de nuevo el número de su ficha." accion={<button className="mt-6 w-full rounded-2xl bg-teal-600 py-4 text-xl font-bold text-white" onClick={onOtro}>Registrar mi ficha</button>} />
+  if (estado === 'pasado') return <Aviso icono={<AlertCircle size={56} className="text-amber-500" />} titulo={`Ya llamaron la ficha ${numero}`} texto="Su número ya pasó. Avise en el consultorio que está aquí para que lo atiendan." />
 
   return (
     <div className="space-y-5 text-center">
       <div className="rounded-3xl bg-white p-8 shadow-xl shadow-teal-900/5">
-        <p className="text-lg text-slate-500">Su número de turno</p>
+        <p className="text-lg text-slate-500">Su ficha</p>
         <p className="my-1 text-9xl font-black tracking-tight text-teal-600">{numero}</p>
         <p className="text-2xl font-bold">
-          {!e ? 'Consultando…' : e.antes === 0 ? 'Usted es el siguiente' : e.antes === 1 ? 'Falta 1 persona' : `Faltan ${e.antes} personas`}
+          {!e ? 'Consultando…' : e.antes === 0 ? 'Usted es el siguiente' : e.antes === 1 ? 'Falta 1 ficha' : `Faltan ${e.antes} fichas`}
         </p>
-        {e?.atendiendo != null && <p className="mt-2 text-base text-slate-500">Ahora atendiendo: {typeof e.atendiendo === 'number' ? `turno ${e.atendiendo}` : e.atendiendo.toLowerCase()}</p>}
+        {e?.atendiendo != null && <p className="mt-2 text-base text-slate-500">Ahora atendiendo: {typeof e.atendiendo === 'number' ? `ficha ${e.atendiendo}` : e.atendiendo.toLowerCase()}</p>}
       </div>
       {e?.espera_min != null && (
         <div className="grid grid-cols-2 gap-3 text-left">
@@ -203,8 +210,8 @@ function MiTurno({ codigo, mio, onOtro }: { codigo: string; mio: Guardado; onOtr
       ) : (
         <p className="flex items-center justify-center gap-2 rounded-2xl bg-teal-50 p-3 text-base text-teal-800"><BellRing size={20} /> Le avisaremos con sonido y vibración</p>
       )}
-      <p className="text-base text-slate-500">Deje esta página abierta: se actualiza sola. El dentista lo llamará por su nombre.</p>
-      <button className="text-sm text-slate-400 underline" onClick={() => confirm('¿Tomar un turno nuevo? Este número ya no se mostrará aquí.') && onOtro()}>Tomar otro turno</button>
+      <p className="text-base text-slate-500">Deje esta página abierta: se actualiza sola y le avisa cuando llamen su ficha.</p>
+      <button className="text-sm text-slate-400 underline" onClick={() => confirm('¿Registrar otra ficha? Esta ya no se mostrará aquí.') && onOtro()}>Me equivoqué de número</button>
     </div>
   )
 }
