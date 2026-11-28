@@ -13,7 +13,7 @@ export function MetodoSelector({ valor, onChange }: { valor?: MetodoPago; onChan
     <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Forma de pago">
       {(Object.keys(METODOS) as MetodoPago[]).map((k) => (
         <button key={k} type="button" role="radio" aria-checked={(valor ?? 'efectivo') === k} onClick={() => onChange(k)}
-          className={`chip border px-3 py-1.5 text-sm ${(valor ?? 'efectivo') === k ? 'border-teal-600 bg-teal-600 text-white' : 'border-slate-200 bg-white text-slate-600'}`}>
+          className={`chip border px-3 py-1.5 text-sm ${(valor ?? 'efectivo') === k ? 'border-teal-700 bg-teal-700 text-white' : 'border-slate-200 bg-white text-slate-600'}`}>
           {METODOS[k]}
         </button>
       ))}

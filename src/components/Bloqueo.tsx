@@ -41,7 +41,7 @@ export default function Bloqueo({ children }: { children: ReactNode }) {
     return () => { window.removeEventListener('bloqueo-cambio', cambio); document.removeEventListener('visibilitychange', vis) }
   }, [cargar, setBloqueado])
 
-  if (!estado) return <div className="flex min-h-screen items-center justify-center text-teal-600"><Loader2 className="animate-spin" size={32} /></div>
+  if (!estado) return <div className="flex min-h-screen items-center justify-center text-teal-700"><Loader2 className="animate-spin" size={32} /></div>
   if (bloqueado && estado.tienePin) return <PantallaPin estado={estado} onAbrir={() => setBloqueado(false)} />
   return <>{children}</>
 }
@@ -104,7 +104,7 @@ function PantallaPin({ estado, onAbrir }: { estado: Estado; onAbrir: () => void 
   })
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-teal-600 to-cyan-800 px-6 py-10 text-white">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-teal-700 to-cyan-800 px-6 py-10 text-white">
       <div className="mb-2 rounded-2xl bg-white/15 p-4"><Lock size={32} /></div>
       <p className="text-lg font-bold">{config.consultorio}</p>
       <p className="mb-6 text-sm text-teal-100">{esperando ? `Espera ${segundos} s para intentar de nuevo` : verificando ? 'Verificando…' : 'Ingresa tu PIN'}</p>

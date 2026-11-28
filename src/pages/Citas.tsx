@@ -61,8 +61,8 @@ export default function Citas() {
           const dt = new Date(d + 'T00:00')
           return (
             <button key={d} onClick={() => setFecha(d)}
-              className={`flex min-w-[3.6rem] flex-col items-center rounded-2xl border px-2 py-2 transition ${fecha === d ? 'border-teal-600 bg-teal-600 text-white' : 'border-slate-200 bg-white'}`}>
-              <span className="text-[11px] uppercase opacity-75">{dt.toLocaleDateString('es', { weekday: 'short' })}</span>
+              className={`flex min-w-[3.6rem] flex-col items-center rounded-2xl border px-2 py-2 transition ${fecha === d ? 'border-teal-700 bg-teal-700 text-white' : 'border-slate-200 bg-white'}`}>
+              <span className="text-[11px] uppercase opacity-90">{dt.toLocaleDateString('es', { weekday: 'short' })}</span>
               <span className="text-lg font-bold">{dt.getDate()}</span>
               <span className={`h-1.5 w-1.5 rounded-full ${proximos?.[d] ? (fecha === d ? 'bg-white' : 'bg-teal-500') : 'bg-transparent'}`} />
             </button>

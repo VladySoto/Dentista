@@ -43,7 +43,7 @@ export function Avatar({ nombre, size = 'md' }: { nombre: string; size?: 'sm' | 
 export function Vacio({ icono, titulo, texto, accion }: { icono: ReactNode; titulo: string; texto?: string; accion?: ReactNode }) {
   return (
     <div className="card flex flex-col items-center px-6 py-12 text-center">
-      <div className="mb-3 rounded-2xl bg-teal-50 p-4 text-teal-600">{icono}</div>
+      <div className="mb-3 rounded-2xl bg-teal-50 p-4 text-teal-700">{icono}</div>
       <p className="font-semibold">{titulo}</p>
       {texto && <p className="mt-1 max-w-sm text-sm text-slate-500">{texto}</p>}
       {accion && <div className="mt-5">{accion}</div>}

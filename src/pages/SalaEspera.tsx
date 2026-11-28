@@ -150,7 +150,7 @@ export default function SalaEspera() {
 
       {atencion.length === 0 && (
         <button onClick={siguiente}
-          className="mb-2 flex w-full items-center gap-4 rounded-2xl bg-gradient-to-br from-teal-600 to-cyan-700 p-4 text-left text-white shadow-lg shadow-teal-700/20 transition active:scale-[.99]">
+          className="mb-2 flex w-full items-center gap-4 rounded-2xl bg-gradient-to-br from-teal-700 to-cyan-800 p-4 text-left text-white shadow-lg shadow-teal-700/20 transition active:scale-[.99]">
           <div className="rounded-xl bg-white/20 p-3"><Megaphone size={24} /></div>
           <div className="min-w-0 flex-1">
             <p className="text-lg font-bold">Llamar ficha {siguienteNumero}</p>
@@ -241,7 +241,7 @@ export default function SalaEspera() {
           <div className="card divide-y divide-slate-100">
             {atendidos.map((t) => (
               <button key={t.id} onClick={() => abrir(t)} className="flex w-full items-center gap-3 p-3 text-left hover:bg-slate-50">
-                <span className="w-10 text-center text-sm font-bold text-slate-400">{t.numero ? `F${t.numero}` : '—'}</span>
+                <span className="w-10 text-center text-sm font-bold text-slate-500">{t.numero ? `F${t.numero}` : '—'}</span>
                 <p className="min-w-0 flex-1 truncate">
                   {nombre(t) ?? 'Sin nombre'}
                   {!t.pacienteId && <span className="ml-1 text-xs text-teal-700">· ponerle nombre</span>}
@@ -273,7 +273,7 @@ export default function SalaEspera() {
       <Modal abierto={confirmarReinicio} onCerrar={() => setConfirmarReinicio(false)} titulo="¿Reiniciar la sala de espera?">
         <div className="space-y-4">
           <ul className="space-y-2 text-sm text-slate-700">
-            <li className="flex gap-2"><RotateCcw size={18} className="shrink-0 text-teal-600" /><span>Se vuelve a llamar desde la <b>ficha 1</b>. Junta las fichas de papel para empezar de nuevo.</span></li>
+            <li className="flex gap-2"><RotateCcw size={18} className="shrink-0 text-teal-700" /><span>Se vuelve a llamar desde la <b>ficha 1</b>. Junta las fichas de papel para empezar de nuevo.</span></li>
             {esperando.length + pasados.length + sinFicha.length + atencion.length > 0 && (
               <li className="flex gap-2"><X size={18} className="shrink-0 text-rose-500" />
                 <span>Se quitan <b>{esperando.length + pasados.length + sinFicha.length + atencion.length} anotado(s)</b>{atencion.length > 0 && <> (incluido el que está en atención)</>}.</span></li>
@@ -348,7 +348,7 @@ function AnotarPaciente({ siguiente, motivos, onListo }: { siguiente: number; mo
       <div className="flex flex-wrap gap-2">
         {motivos.map((m) => (
           <button key={m} type="button" onClick={() => setMotivo(motivo === m ? '' : m)}
-            className={`chip border px-3 py-1.5 text-sm ${motivo === m ? 'border-teal-600 bg-teal-600 text-white' : 'border-slate-200 bg-white text-slate-600'}`}>{m}</button>
+            className={`chip border px-3 py-1.5 text-sm ${motivo === m ? 'border-teal-700 bg-teal-700 text-white' : 'border-slate-200 bg-white text-slate-600'}`}>{m}</button>
         ))}
       </div>
       {error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
@@ -360,7 +360,7 @@ function AnotarPaciente({ siguiente, motivos, onListo }: { siguiente: number; mo
 function Stat({ icono, valor, label }: { icono: React.ReactNode; valor: React.ReactNode; label: string }) {
   return (
     <div className="card p-3 sm:p-4">
-      <div className="mb-1 text-teal-600">{icono}</div>
+      <div className="mb-1 text-teal-700">{icono}</div>
       <p className="text-xl font-bold sm:text-2xl">{valor}</p>
       <p className="text-xs text-slate-500">{label}</p>
     </div>
@@ -382,12 +382,12 @@ function TurnoCard({ t, nombre, p, ahora, activo, siguiente, estimado, onAbrir, 
   return (
     <div className={`card flex items-center gap-3 p-3 ${activo ? 'border-teal-300 bg-teal-50/60 ring-1 ring-teal-200' : siguiente ? 'border-teal-200' : ''}`}>
       <div aria-label={etiquetaTurno(t)}
-        className={`flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl font-bold leading-none ${activo || siguiente ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+        className={`flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl font-bold leading-none ${activo || siguiente ? 'bg-teal-700 text-white' : 'bg-slate-100 text-slate-600'}`}>
         {t.numero ? <><span className="text-[9px] font-semibold uppercase opacity-75">ficha</span><span className="text-lg">{t.numero}</span></>
           : <span className="text-[10px] font-semibold uppercase">cita</span>}
       </div>
       <button onClick={onAbrir} className="min-w-0 flex-1 text-left">
-        <p className={`flex items-center gap-1.5 truncate font-semibold ${nombre ? '' : 'italic text-slate-400'}`}>
+        <p className={`flex items-center gap-1.5 truncate font-semibold ${nombre ? '' : 'italic text-slate-500'}`}>
           {nombre ?? <><Ticket size={15} className="shrink-0 text-amber-500" /> Sin nombre</>}
           {t.origen === 'qr' && <Smartphone size={14} className="shrink-0 text-sky-500" aria-label="Se registró con QR" />}
           {tieneAlerta && <AlertTriangle size={15} className="shrink-0 text-amber-500" />}

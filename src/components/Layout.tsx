@@ -58,11 +58,11 @@ export default function Layout() {
       <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-200 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
         {principales.map(({ to, corto, icono: I }) => (
           <NavLink key={to} to={to} end={to === '/'}
-            className={({ isActive }) => `flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${isActive ? 'text-teal-600' : 'text-slate-500'}`}>
+            className={({ isActive }) => `flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${isActive ? 'text-teal-700' : 'text-slate-500'}`}>
             <I size={22} /> {corto}
           </NavLink>
         ))}
-        <NavLink to="/mas" className={`flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${enMas ? 'text-teal-600' : 'text-slate-500'}`}>
+        <NavLink to="/mas" className={`flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${enMas ? 'text-teal-700' : 'text-slate-500'}`}>
           <span className="relative">
             <LayoutGrid size={22} />
             <span className="absolute -right-1 -top-0.5 flex">

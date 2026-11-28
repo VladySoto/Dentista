@@ -38,7 +38,7 @@ export default function Inventario() {
         </button>
         <button className="btn-ghost p-2" aria-label={`Usar 1 de ${m.nombre}`} onClick={() => cambiar(m, -1)}><Minus size={18} /></button>
         <span className={`w-12 text-center text-lg font-bold ${a.includes('agotado') ? 'text-rose-600' : a.includes('poco') ? 'text-amber-600' : ''}`}>
-          {m.cantidad}<span className="block text-[10px] font-normal text-slate-400">{m.unidad || 'unid.'}</span>
+          {m.cantidad}<span className="block text-[10px] font-normal text-slate-500">{m.unidad || 'unid.'}</span>
         </span>
         <button className="btn-ghost p-2" aria-label={`Agregar 1 de ${m.nombre}`} onClick={() => cambiar(m, 1)}><Plus size={18} /></button>
         <button className="btn-soft p-2" aria-label={`Registrar compra de ${m.nombre}`} onClick={() => setCompra(m)}><ShoppingCart size={17} /></button>
@@ -58,7 +58,7 @@ export default function Inventario() {
       ) : (
         <>
           <div className="relative mb-4">
-            <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
             <input className="input pl-10" placeholder="Buscar material…" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
           {conAviso.length > 0 && (

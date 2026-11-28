@@ -34,18 +34,18 @@ export default function PacienteSelector({ onElegir, sugerido }: {
       {sugerido?.nombre && (
         <button onClick={() => setNuevo(sugerido)}
           className="mb-4 flex w-full items-center gap-3 rounded-2xl border border-teal-200 bg-teal-50 p-3 text-left hover:bg-teal-100">
-          <Smartphone size={20} className="shrink-0 text-teal-600" />
+          <Smartphone size={20} className="shrink-0 text-teal-700" />
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-semibold text-teal-900">Registrar a “{sugerido.nombre}”</span>
             <span className="block truncate text-xs text-teal-700">
               {[sugerido.documento && `CI ${sugerido.documento}`, sugerido.telefono].filter(Boolean).join(' · ') || 'Datos que escribió al tomar turno'}
             </span>
           </span>
-          <UserPlus size={18} className="text-teal-600" />
+          <UserPlus size={18} className="text-teal-700" />
         </button>
       )}
       <div className="relative">
-        <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+        <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
         <input className="input pl-10" placeholder="Nombre, CI o teléfono…" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
       </div>
       <div className="mt-3 divide-y divide-slate-100">

@@ -84,7 +84,7 @@ export default function Caja() {
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3">
-        <div className="card col-span-2 bg-gradient-to-br from-teal-600 to-cyan-700 p-5 text-white">
+        <div className="card col-span-2 bg-gradient-to-br from-teal-700 to-cyan-800 p-5 text-white">
           <p className="text-sm text-teal-50">Cobrado {periodo === 'hoy' ? 'hoy' : 'este mes'}</p>
           <p className="text-3xl font-bold">Bs {dinero(total)}</p>
           <p className="mt-1 text-sm text-teal-50">{datos.atenciones} consulta(s) registrada(s)</p>
@@ -196,7 +196,7 @@ function Fila({ p, detalle, detalleCls = '', wa }: { p: Paciente; detalle: strin
         </div>
       </Link>
       {wa ? <a href={wa} target="_blank" rel="noreferrer" className="btn-soft px-3 py-2 text-xs"><MessageCircle size={15} /> Avisar</a>
-        : <span className="text-xs text-slate-400">Sin teléfono</span>}
+        : <span className="text-xs text-slate-500">Sin teléfono</span>}
     </div>
   )
 }

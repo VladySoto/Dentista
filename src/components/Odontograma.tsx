@@ -50,7 +50,7 @@ export const ESTADOS: Record<EstadoDiente, { label: string; color: string }> = {
   corona: { label: 'Corona', color: 'bg-amber-400 border-amber-500 text-amber-950' },
   implante: { label: 'Implante', color: 'bg-emerald-500 border-emerald-600 text-white' },
   extraido: { label: 'Extraído', color: 'bg-slate-200 border-slate-400 text-slate-600' },
-  ausente: { label: 'Ausente', color: 'bg-slate-100 border-dashed border-slate-300 text-slate-400' },
+  ausente: { label: 'Ausente', color: 'bg-slate-100 border-dashed border-slate-300 text-slate-500' },
 }
 const COLOR_CARA: Record<EstadoCara, string> = { caries: '#f43f5e', obturado: '#0ea5e9' }
 const ESTADOS_DIENTE: EstadoDiente[] = ['endodoncia', 'corona', 'implante', 'extraido', 'ausente']
@@ -149,9 +149,9 @@ export default function Odontograma({ paciente }: { paciente: Paciente }) {
           i === mitad && <span key="sep" className="border-l border-dashed border-slate-300" />,
           <button key={n} type="button" disabled={!!pasado} onClick={() => setAbierto(n)} aria-label={`Diente ${n}`}
             className="flex flex-col items-center gap-0.5 rounded-md transition enabled:active:scale-90 enabled:hover:bg-teal-50">
-            {arriba && <span className="text-[9px] text-slate-400 sm:text-[10px]">{n}</span>}
+            {arriba && <span className="text-[9px] text-slate-500 sm:text-[10px]">{n}</span>}
             <Diente n={n} estado={dientes[n]} caras={caras[n]} />
-            {!arriba && <span className="text-[9px] text-slate-400 sm:text-[10px]">{n}</span>}
+            {!arriba && <span className="text-[9px] text-slate-500 sm:text-[10px]">{n}</span>}
           </button>,
         ])}
         {Array.from({ length: relleno }, (_, i) => <span key={`b${i}`} />)}
@@ -172,12 +172,12 @@ export default function Odontograma({ paciente }: { paciente: Paciente }) {
 
       {anteriores.length > 0 && (
         <div className="mb-3 flex items-center gap-1.5 overflow-x-auto pb-1">
-          <History size={16} className="shrink-0 text-slate-400" />
+          <History size={16} className="shrink-0 text-slate-500" />
           <button type="button" onClick={() => setVerFecha(null)}
-            className={`chip shrink-0 border px-3 py-1 ${!verFecha ? 'border-teal-600 bg-teal-600 text-white' : 'border-slate-200 bg-white text-slate-600'}`}>Actual</button>
+            className={`chip shrink-0 border px-3 py-1 ${!verFecha ? 'border-teal-700 bg-teal-700 text-white' : 'border-slate-200 bg-white text-slate-600'}`}>Actual</button>
           {anteriores.map((h) => (
             <button key={h.fecha} type="button" onClick={() => setVerFecha(h.fecha)}
-              className={`chip shrink-0 border px-3 py-1 ${verFecha === h.fecha ? 'border-teal-600 bg-teal-600 text-white' : 'border-slate-200 bg-white text-slate-600'}`}>{fechaCorta(h.fecha)}</button>
+              className={`chip shrink-0 border px-3 py-1 ${verFecha === h.fecha ? 'border-teal-700 bg-teal-700 text-white' : 'border-slate-200 bg-white text-slate-600'}`}>{fechaCorta(h.fecha)}</button>
           ))}
         </div>
       )}
@@ -243,7 +243,7 @@ function EditorDiente({ n, estado, caras, onCambiar }: {
       </div>
       <div className="mx-auto w-52 select-none">
         <Diente n={n} estado={estado} caras={caras} grande onCara={tocarCara} />
-        <div className="mt-1 grid grid-cols-3 text-center text-[10px] text-slate-400">
+        <div className="mt-1 grid grid-cols-3 text-center text-[10px] text-slate-500">
           <span>{carasPorPosicion(n).izq === 'M' ? '← Mesial' : '← Distal'}</span>
           <span>Centro: oclusal</span>
           <span>{carasPorPosicion(n).der === 'M' ? 'Mesial →' : 'Distal →'}</span>

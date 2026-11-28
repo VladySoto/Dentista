@@ -57,8 +57,8 @@ export default function ConsultaForm({ pacienteId, inicial, motivoInicial = '', 
               const on = elegidos.includes(t.nombre)
               return (
                 <button key={t.id} type="button" onClick={() => alternar(t.nombre, t.precio)}
-                  className={`chip border px-3 py-1.5 text-sm transition ${on ? 'border-teal-600 bg-teal-600 text-white' : 'border-slate-200 bg-white text-slate-700'}`}>
-                  {on && <Check size={14} />}{t.nombre} <span className={on ? 'text-teal-100' : 'text-slate-400'}>{dinero(t.precio)}</span>
+                  className={`chip border px-3 py-1.5 text-sm transition ${on ? 'border-teal-700 bg-teal-700 text-white' : 'border-slate-200 bg-white text-slate-700'}`}>
+                  {on && <Check size={14} />}{t.nombre} <span className={on ? 'text-teal-100' : 'text-slate-500'}>{dinero(t.precio)}</span>
                 </button>
               )
             })}

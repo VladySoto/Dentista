@@ -40,7 +40,7 @@ export function IdentificarTurno({ turno, onElegir, onSinNombre, onNoVino }: {
     <div className="space-y-3">
       {sugerido && (
         <button onClick={() => crear(sugerido, { documento: turno.documentoLlegada, telefono: turno.telefonoLlegada })}
-          className="flex w-full items-center gap-3 rounded-2xl bg-teal-600 p-4 text-left text-white shadow-sm active:scale-[.99]">
+          className="flex w-full items-center gap-3 rounded-2xl bg-teal-700 p-4 text-left text-white shadow-sm active:scale-[.99]">
           <UserPlus size={22} className="shrink-0" />
           <span className="min-w-0 flex-1">
             <span className="block font-semibold">Crear «{sugerido}»{verbo}</span>
@@ -51,7 +51,7 @@ export function IdentificarTurno({ turno, onElegir, onSinNombre, onNoVino }: {
       )}
 
       <div className="relative">
-        <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+        <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
         <input className="input pl-10 text-base" placeholder={sugerido ? 'O busca por nombre o carnet…' : 'Nombre o carnet…'} value={q}
           onChange={(e) => setQ(e.target.value)} autoFocus={!sugerido}
           onKeyDown={(e) => { if (e.key === 'Enter' && puedeCrear && !resultados?.length) crear(texto) }} />
@@ -87,7 +87,7 @@ export function IdentificarTurno({ turno, onElegir, onSinNombre, onNoVino }: {
           <SkipForward size={18} /> No vino: llamar la ficha {turno.numero + 1}
         </button>
       )}
-      <p className="text-center text-xs text-slate-400">Los datos completos se pueden agregar después en la ficha.</p>
+      <p className="text-center text-xs text-slate-500">Los datos completos se pueden agregar después en la ficha.</p>
     </div>
   )
 }
@@ -132,8 +132,8 @@ export function TerminarSinNombre({ turno, siguienteFicha, onListo }: {
               const on = elegidos.includes(t.nombre)
               return (
                 <button key={t.id} type="button" onClick={() => alternar(t.nombre, t.precio)}
-                  className={`chip border px-3 py-1.5 text-sm ${on ? 'border-teal-600 bg-teal-600 text-white' : 'border-slate-200 bg-white text-slate-700'}`}>
-                  {on && <Check size={14} />}{t.nombre} <span className={on ? 'text-teal-100' : 'text-slate-400'}>{dinero(t.precio)}</span>
+                  className={`chip border px-3 py-1.5 text-sm ${on ? 'border-teal-700 bg-teal-700 text-white' : 'border-slate-200 bg-white text-slate-700'}`}>
+                  {on && <Check size={14} />}{t.nombre} <span className={on ? 'text-teal-100' : 'text-slate-500'}>{dinero(t.precio)}</span>
                 </button>
               )
             })}

@@ -100,7 +100,7 @@ export default function PacienteDetalle() {
       <Link to={turno ? '/' : '/pacientes'} className="btn-ghost -ml-3 mb-3 px-3 py-1.5"><ArrowLeft size={18} /> {turno ? 'Sala de espera' : 'Pacientes'}</Link>
 
       {turno && (
-        <div className="mb-4 rounded-2xl bg-gradient-to-br from-teal-600 to-cyan-700 p-4 text-white shadow-lg shadow-teal-700/20">
+        <div className="mb-4 rounded-2xl bg-gradient-to-br from-teal-700 to-cyan-800 p-4 text-white shadow-lg shadow-teal-700/20">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 flex-col items-center justify-center rounded-xl bg-white/20 font-bold leading-none">
               <span className="text-[9px] uppercase opacity-80">{turno.numero ? 'ficha' : 'cita'}</span>
@@ -167,7 +167,7 @@ export default function PacienteDetalle() {
       {proximaCita !== undefined && (
         proximaCita ? (
           <div className="card mb-4 flex items-center gap-3 border-dashed border-teal-300 p-4">
-            <div className="rounded-xl bg-teal-50 p-2.5 text-teal-600"><CalendarDays size={22} /></div>
+            <div className="rounded-xl bg-teal-50 p-2.5 text-teal-700"><CalendarDays size={22} /></div>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Próxima cita</p>
               <p className="text-lg font-bold leading-tight first-letter:uppercase">{fechaLarga(proximaCita.fecha).replace(/ de \d{4}$/, '')}</p>
@@ -315,7 +315,7 @@ function PagoItem({ pg, paciente }: { pg: Pago; paciente: Paciente }) {
         <span className="flex items-center gap-1 text-xs text-slate-500">
           {fechaCorta(pg.fecha)}
           <BotonRecibo paciente={paciente} datos={{ id: pg.id!, fecha: pg.fecha, monto: pg.monto, concepto: `Abono a cuenta${pg.nota ? ` (${pg.nota})` : ''}`, metodo: pg.metodo }} />
-          <button aria-label="Eliminar pago" className="text-slate-400 hover:text-rose-600" onClick={() => confirm('¿Eliminar este pago?') && db.pagos.delete(pg.id!)}><Trash2 size={14} /></button>
+          <button aria-label="Eliminar pago" className="text-slate-500 hover:text-rose-600" onClick={() => confirm('¿Eliminar este pago?') && db.pagos.delete(pg.id!)}><Trash2 size={14} /></button>
         </span>
       </div>
     </li>

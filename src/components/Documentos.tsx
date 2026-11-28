@@ -104,7 +104,7 @@ export function RecetaForm({ paciente, onListo }: { paciente: Paciente; onListo:
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold text-teal-700">{i + 1}.</span>
                   <input className="input py-1.5 font-semibold" placeholder="Medicamento y concentración" value={m.nombre} onChange={(e) => cambiar(i, 'nombre', e.target.value)} />
-                  <button type="button" className="btn-ghost p-2 text-slate-400" aria-label="Quitar" onClick={() => setMeds(meds.filter((_, j) => j !== i))}><X size={16} /></button>
+                  <button type="button" className="btn-ghost p-2 text-slate-500" aria-label="Quitar" onClick={() => setMeds(meds.filter((_, j) => j !== i))}><X size={16} /></button>
                 </div>
                 <textarea className="input mt-2 py-1.5 text-sm" rows={2} placeholder="Dosis, cada cuánto y por cuántos días" value={m.indicacion} onChange={(e) => cambiar(i, 'indicacion', e.target.value)} />
                 {peligro && <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-rose-700"><AlertTriangle size={13} /> Posible alergia del paciente</p>}
@@ -156,7 +156,7 @@ export function PresupuestoForm({ paciente, onListo }: { paciente: Paciente; onL
           {tratamientos?.map((t) => (
             <button key={t.id} type="button" onClick={() => setItems([...items, { tratamiento: t.nombre, cantidad: 1, precio: t.precio }])}
               className="chip border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 hover:border-teal-300">
-              {t.nombre} <span className="text-slate-400">{dinero(t.precio)}</span>
+              {t.nombre} <span className="text-slate-500">{dinero(t.precio)}</span>
             </button>
           ))}
           <button type="button" onClick={() => setItems([...items, { tratamiento: '', cantidad: 1, precio: 0 }])} className="chip border border-dashed border-slate-300 px-3 py-1.5 text-sm text-slate-500"><Plus size={14} /> Otro</button>
@@ -169,7 +169,7 @@ export function PresupuestoForm({ paciente, onListo }: { paciente: Paciente; onL
             <div key={i} className="rounded-xl border border-slate-200 p-3">
               <div className="flex items-center gap-2">
                 <input className="input py-1.5 font-semibold" placeholder="Tratamiento" value={it.tratamiento} onChange={(e) => cambiar(i, 'tratamiento', e.target.value)} />
-                <button type="button" className="btn-ghost p-2 text-slate-400" aria-label="Quitar" onClick={() => setItems(items.filter((_, j) => j !== i))}><X size={16} /></button>
+                <button type="button" className="btn-ghost p-2 text-slate-500" aria-label="Quitar" onClick={() => setItems(items.filter((_, j) => j !== i))}><X size={16} /></button>
               </div>
               <div className="mt-2 grid grid-cols-[1fr_4rem_5.5rem] gap-2 text-sm">
                 <input className="input py-1.5" placeholder="Pieza" aria-label="Pieza" value={it.pieza ?? ''} onChange={(e) => cambiar(i, 'pieza', e.target.value)} />
@@ -218,7 +218,7 @@ export function DocumentoItem({ d, paciente }: { d: Documento; paciente: Pacient
         <div className="mt-2 flex items-center gap-1">
           <button className="btn-ghost px-2.5 py-1.5 text-xs" disabled={ocupado} onClick={() => exportar(d)}><Share2 size={14} /> Compartir</button>
           <button className="btn-ghost px-2.5 py-1.5 text-xs" disabled={ocupado} onClick={() => exportar(d, true)}><Download size={14} /> PDF</button>
-          <button className="btn-ghost ml-auto p-1.5 text-slate-400 hover:text-rose-600" aria-label="Eliminar"
+          <button className="btn-ghost ml-auto p-1.5 text-slate-500 hover:text-rose-600" aria-label="Eliminar"
             onClick={() => confirm(receta ? '¿Eliminar esta receta?' : '¿Eliminar este presupuesto?') && db.documentos.delete(d.id!)}><Trash2 size={14} /></button>
         </div>
       </div>

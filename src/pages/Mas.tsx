@@ -21,7 +21,7 @@ export default function Mas() {
       <div className="card divide-y divide-slate-100 overflow-hidden">
         {SECUNDARIOS.map(({ to, label, icono: I }) => (
           <Link key={to} to={to} className="flex items-center gap-4 p-4 hover:bg-slate-50">
-            <div className="rounded-xl bg-teal-50 p-2.5 text-teal-600"><I size={22} /></div>
+            <div className="rounded-xl bg-teal-50 p-2.5 text-teal-700"><I size={22} /></div>
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-2 font-semibold">
                 {label}

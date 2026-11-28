@@ -115,7 +115,7 @@ function Visor({ archivo, onCerrar }: { archivo: Archivo; onCerrar: () => void }
       <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-2">
         {url ? <img src={url} alt={archivo.nota || TIPOS[archivo.tipo]} className="max-h-full max-w-full object-contain" />
           : error ? <div className="max-w-sm text-center"><img src={archivo.miniatura} alt="" className="mx-auto mb-4 w-48 rounded-xl opacity-60" /><p className="text-sm text-slate-300">{error}</p></div>
-          : <Loader2 size={36} className="animate-spin text-slate-400" />}
+          : <Loader2 size={36} className="animate-spin text-slate-500" />}
       </div>
     </div>
   )

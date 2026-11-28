@@ -24,7 +24,7 @@ export default function Pacientes() {
         accion={<button className="btn-primary" onClick={() => setNuevo(true)} aria-label="Nuevo paciente"><UserPlus size={18} /><span className="hidden sm:inline">Nuevo paciente</span></button>} />
 
       <div className="relative mb-4">
-        <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+        <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
         <input className="input pl-10" placeholder="Buscar por nombre, CI o teléfono…" value={q} onChange={(e) => setQ(e.target.value)} />
       </div>
 

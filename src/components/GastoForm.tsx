@@ -31,7 +31,7 @@ export default function GastoForm({ inicial, onListo }: { inicial?: Gasto; onLis
         <div className="flex flex-wrap gap-1.5">
           {CATEGORIAS_GASTO.map((c) => (
             <button key={c} type="button" onClick={() => setG({ ...g, categoria: c })}
-              className={`chip border px-3 py-1.5 text-sm ${g.categoria === c ? 'border-teal-600 bg-teal-600 text-white' : 'border-slate-200 bg-white text-slate-600'}`}>{c}</button>
+              className={`chip border px-3 py-1.5 text-sm ${g.categoria === c ? 'border-teal-700 bg-teal-700 text-white' : 'border-slate-200 bg-white text-slate-600'}`}>{c}</button>
           ))}
         </div>
       </div>

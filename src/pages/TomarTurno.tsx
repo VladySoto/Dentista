@@ -113,12 +113,12 @@ function Formulario({ codigo, motivos, onListo }: { codigo: string; motivos: str
         <div className="grid grid-cols-2 gap-2">
           {[...motivos, 'Otro'].map((m) => (
             <button key={m} type="button" onClick={() => setF({ ...f, motivo: f.motivo === m ? '' : m })}
-              className={`rounded-2xl border-2 py-3 font-semibold transition ${f.motivo === m ? 'border-teal-600 bg-teal-600 text-white' : 'border-slate-200 bg-white text-slate-700'}`}>{m}</button>
+              className={`rounded-2xl border-2 py-3 font-semibold transition ${f.motivo === m ? 'border-teal-700 bg-teal-700 text-white' : 'border-slate-200 bg-white text-slate-700'}`}>{m}</button>
           ))}
         </div>
       </fieldset>
       {error && <p className="rounded-2xl bg-rose-50 p-4 text-base font-medium text-rose-700">{error}</p>}
-      <button disabled={enviando} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-600 py-4 text-xl font-bold text-white shadow-lg shadow-teal-600/30 active:scale-[.98] disabled:opacity-60">
+      <button disabled={enviando} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-700 py-4 text-xl font-bold text-white shadow-lg shadow-teal-600/30 active:scale-[.98] disabled:opacity-60">
         {enviando ? <><Loader2 className="animate-spin" /> Un momento…</> : 'Registrar mi ficha'}
       </button>
     </form>
@@ -165,22 +165,22 @@ function MiTurno({ codigo, mio, onOtro }: { codigo: string; mio: Guardado; onOtr
   const estado = e?.estado ?? 'espera'
 
   if (estado === 'atencion') return (
-    <div className="animate-pulse rounded-3xl bg-teal-600 p-8 text-center text-white shadow-xl">
+    <div className="animate-pulse rounded-3xl bg-teal-700 p-8 text-center text-white shadow-xl">
       <PartyPopper size={56} className="mx-auto mb-3" />
       <p className="text-2xl font-bold">¡Es su turno!</p>
       <p className="my-2 text-8xl font-black">{numero}</p>
       <p className="text-xl">Pase al consultorio</p>
     </div>
   )
-  if (estado === 'atendido') return <Aviso icono={<CheckCircle2 size={56} className="text-teal-600" />} titulo="¡Gracias por su visita!" texto="Su atención ya terminó." accion={<button className="mt-6 text-base text-teal-700 underline" onClick={onOtro}>Tomar un turno nuevo</button>} />
-  if (estado === 'cancelado') return <Aviso icono={<XCircle size={56} className="text-slate-400" />} titulo="Registro cancelado" texto="La sala se reinició o su ficha se quitó de la lista. Si todavía espera, registre de nuevo el número de su ficha." accion={<button className="mt-6 w-full rounded-2xl bg-teal-600 py-4 text-xl font-bold text-white" onClick={onOtro}>Registrar mi ficha</button>} />
+  if (estado === 'atendido') return <Aviso icono={<CheckCircle2 size={56} className="text-teal-700" />} titulo="¡Gracias por su visita!" texto="Su atención ya terminó." accion={<button className="mt-6 text-base text-teal-700 underline" onClick={onOtro}>Tomar un turno nuevo</button>} />
+  if (estado === 'cancelado') return <Aviso icono={<XCircle size={56} className="text-slate-500" />} titulo="Registro cancelado" texto="La sala se reinició o su ficha se quitó de la lista. Si todavía espera, registre de nuevo el número de su ficha." accion={<button className="mt-6 w-full rounded-2xl bg-teal-700 py-4 text-xl font-bold text-white" onClick={onOtro}>Registrar mi ficha</button>} />
   if (estado === 'pasado') return <Aviso icono={<AlertCircle size={56} className="text-amber-500" />} titulo={`Ya llamaron la ficha ${numero}`} texto="Su número ya pasó. Avise en el consultorio que está aquí para que lo atiendan." />
 
   return (
     <div className="space-y-5 text-center">
       <div className="rounded-3xl bg-white p-8 shadow-xl shadow-teal-900/5">
         <p className="text-lg text-slate-500">Su ficha</p>
-        <p className="my-1 text-9xl font-black tracking-tight text-teal-600">{numero}</p>
+        <p className="my-1 text-9xl font-black tracking-tight text-teal-700">{numero}</p>
         <p className="text-2xl font-bold">
           {!e ? 'Consultando…' : e.antes === 0 ? 'Usted es el siguiente' : e.antes === 1 ? 'Falta 1 ficha' : `Faltan ${e.antes} fichas`}
         </p>
@@ -189,13 +189,13 @@ function MiTurno({ codigo, mio, onOtro }: { codigo: string; mio: Guardado; onOtr
       {e?.espera_min != null && (
         <div className="grid grid-cols-2 gap-3 text-left">
           <div className="rounded-2xl bg-white p-4 shadow-sm">
-            <Clock size={22} className="mb-1 text-teal-600" />
+            <Clock size={22} className="mb-1 text-teal-700" />
             <p className="text-sm text-slate-500">Le toca aprox.</p>
             <p className="text-2xl font-bold">{e.antes === 0 && e.espera_min < 5 ? 'Ya' : horaAprox(e.espera_min)}</p>
             <p className="text-sm text-slate-500">{e.antes === 0 && e.espera_min < 5 ? 'en cualquier momento' : `en unos ${aproximado(e.espera_min)}`}</p>
           </div>
           <div className="rounded-2xl bg-white p-4 shadow-sm">
-            <Timer size={22} className="mb-1 text-teal-600" />
+            <Timer size={22} className="mb-1 text-teal-700" />
             <p className="text-sm text-slate-500">Su atención dura</p>
             <p className="text-2xl font-bold">{aproximado(e.duracion_min ?? 20)}</p>
             <p className="text-sm text-slate-500">aproximadamente</p>
@@ -211,7 +211,7 @@ function MiTurno({ codigo, mio, onOtro }: { codigo: string; mio: Guardado; onOtr
         <p className="flex items-center justify-center gap-2 rounded-2xl bg-teal-50 p-3 text-base text-teal-800"><BellRing size={20} /> Le avisaremos con sonido y vibración</p>
       )}
       <p className="text-base text-slate-500">Deje esta página abierta: se actualiza sola y le avisa cuando llamen su ficha.</p>
-      <button className="text-sm text-slate-400 underline" onClick={() => confirm('¿Registrar otra ficha? Esta ya no se mostrará aquí.') && onOtro()}>Me equivoqué de número</button>
+      <button className="text-sm text-slate-500 underline" onClick={() => confirm('¿Registrar otra ficha? Esta ya no se mostrará aquí.') && onOtro()}>Me equivoqué de número</button>
     </div>
   )
 }
@@ -239,7 +239,7 @@ function avisar(titulo: string, cuerpo: string) {
   }
 }
 
-const Cargando = () => <div className="flex justify-center py-20 text-teal-600"><Loader2 size={40} className="animate-spin" /></div>
+const Cargando = () => <div className="flex justify-center py-20 text-teal-700"><Loader2 size={40} className="animate-spin" /></div>
 
 function Aviso({ icono, titulo, texto, accion }: { icono: React.ReactNode; titulo: string; texto: string; accion?: React.ReactNode }) {
   return (

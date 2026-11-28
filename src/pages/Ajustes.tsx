@@ -44,7 +44,7 @@ export default function Ajustes() {
             <li><b>iPhone (Safari):</b> botón Compartir → “Agregar a inicio”.</li>
             <li><b>PC (Chrome/Edge):</b> ícono de instalar en la barra de direcciones.</li>
           </ul>
-          <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-400">
+          <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
             Versión del {new Date(__VERSION__).toLocaleString('es', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} · {location.host}
           </p>
         </Seccion>
@@ -56,7 +56,7 @@ export default function Ajustes() {
 function Seccion({ icono, titulo, sub, children }: { icono: ReactNode; titulo: string; sub?: string; children: ReactNode }) {
   return (
     <section className="card p-5">
-      <div className="flex items-center gap-2 font-semibold"><span className="text-teal-600">{icono}</span>{titulo}</div>
+      <div className="flex items-center gap-2 font-semibold"><span className="text-teal-700">{icono}</span>{titulo}</div>
       {sub && <p className="mt-1 text-sm text-slate-500">{sub}</p>}
       <div className="mt-4">{children}</div>
     </section>
@@ -124,10 +124,10 @@ function Tratamientos() {
           <div key={t.id} className="flex items-center gap-2 p-2">
             <input className="input flex-1 border-transparent px-2 py-1.5 hover:border-slate-200" defaultValue={t.nombre}
               onBlur={(e) => e.target.value.trim() && e.target.value !== t.nombre && db.tratamientos.update(t.id!, { nombre: e.target.value.trim() })} aria-label="Nombre" />
-            <span className="text-sm text-slate-400">Bs</span>
+            <span className="text-sm text-slate-500">Bs</span>
             <input className="input w-24 border-transparent px-2 py-1.5 text-right hover:border-slate-200" type="number" inputMode="decimal" min="0" defaultValue={t.precio}
               onBlur={(e) => Number(e.target.value) !== t.precio && db.tratamientos.update(t.id!, { precio: Number(e.target.value) || 0 })} aria-label="Precio" />
-            <button className="btn-ghost p-2 text-slate-400 hover:text-rose-600" aria-label={`Eliminar ${t.nombre}`}
+            <button className="btn-ghost p-2 text-slate-500 hover:text-rose-600" aria-label={`Eliminar ${t.nombre}`}
               onClick={() => confirm(`¿Eliminar “${t.nombre}”?`) && db.tratamientos.delete(t.id!)}><Trash2 size={16} /></button>
           </div>
         ))}
@@ -179,8 +179,8 @@ function MotivosTiempos() {
               </div>
               <input className="input w-20 border-transparent px-2 py-1.5 text-right hover:border-slate-200" type="number" min="1" inputMode="numeric"
                 value={m.minutos} aria-label={`Minutos de ${m.nombre}`} onChange={(e) => cambiar(i, 'minutos', e.target.value)} />
-              <span className="text-sm text-slate-400">min</span>
-              <button className="btn-ghost p-2 text-slate-400 hover:text-rose-600" aria-label={`Eliminar ${m.nombre}`}
+              <span className="text-sm text-slate-500">min</span>
+              <button className="btn-ghost p-2 text-slate-500 hover:text-rose-600" aria-label={`Eliminar ${m.nombre}`}
                 onClick={() => setForm({ ...form, motivos: motivos.filter((_, j) => j !== i) })}><Trash2 size={16} /></button>
             </div>
           )
@@ -198,7 +198,7 @@ function MotivosTiempos() {
         <span className="text-sm text-slate-600">Fichas sin motivo o no anotadas:</span>
         <input className="input w-20 px-2 py-1.5 text-right" type="number" min="1" inputMode="numeric" aria-label="Minutos sin motivo"
           value={form.minutosPorDefecto ?? 20} onChange={(e) => setForm({ ...form, minutosPorDefecto: Math.max(1, Number(e.target.value) || 0) })} />
-        <span className="text-sm text-slate-400">min</span>
+        <span className="text-sm text-slate-500">min</span>
       </div>
       {conDatos.length > 0 && (
         <button className="btn-ghost mt-3 px-3 py-1.5 text-xs text-teal-700" onClick={() => setForm({
@@ -251,7 +251,7 @@ function Medicamentos() {
                   <input className="input border-transparent px-2 py-1 text-sm text-slate-600 hover:border-slate-200" defaultValue={m.indicacion} aria-label="Indicación"
                     onBlur={(e) => e.target.value !== m.indicacion && db.medicamentos.update(m.id!, { indicacion: e.target.value.trim() })} />
                 </div>
-                <button className="btn-ghost p-2 text-slate-400 hover:text-rose-600" aria-label={`Eliminar ${m.nombre}`}
+                <button className="btn-ghost p-2 text-slate-500 hover:text-rose-600" aria-label={`Eliminar ${m.nombre}`}
                   onClick={() => confirm(`¿Eliminar “${m.nombre}”?`) && db.medicamentos.delete(m.id!)}><Trash2 size={16} /></button>
               </div>
             ))}
@@ -286,10 +286,10 @@ function Plantillas() {
           <div key={k}>
             <div className="mb-1.5 flex items-center justify-between">
               <span className="label mb-0">{titulo}</span>
-              <button className="text-xs text-slate-400 hover:text-teal-700"
+              <button className="text-xs text-slate-500 hover:text-teal-700"
                 onClick={() => setForm({ ...form, plantillas: { ...form.plantillas, [k]: CONFIG_INICIAL.plantillas[k] } })}>Restablecer</button>
             </div>
-            <textarea className="input" rows={3} value={form.plantillas[k]}
+            <textarea className="input" rows={3} aria-label={titulo} value={form.plantillas[k]}
               onChange={(e) => setForm({ ...form, plantillas: { ...form.plantillas, [k]: e.target.value } })} />
             <p className="mt-1.5 rounded-xl rounded-tl-sm bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
               {rellenar(form.plantillas[k], { ...varsPlantilla(form), ...ejemplo, ...extra })}

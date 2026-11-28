@@ -9,7 +9,7 @@
 
 @layer components {
   .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-[.98] disabled:opacity-50 disabled:pointer-events-none; }
-  .btn-primary { @apply btn bg-teal-600 text-white shadow-sm hover:bg-teal-700; }
+  .btn-primary { @apply btn bg-teal-700 text-white shadow-sm hover:bg-teal-800; }
   .btn-soft { @apply btn bg-teal-50 text-teal-700 hover:bg-teal-100; }
   .btn-ghost { @apply btn text-slate-600 hover:bg-slate-100; }
   .btn-danger { @apply btn bg-rose-50 text-rose-700 hover:bg-rose-100; }

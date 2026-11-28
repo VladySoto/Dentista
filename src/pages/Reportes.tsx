@@ -129,7 +129,7 @@ const Tarjeta = ({ titulo, children }: { titulo: string; children: React.ReactNo
   </section>
 )
 
-const Vacio = ({ texto }: { texto: string }) => <p className="py-6 text-center text-sm text-slate-400">{texto}</p>
+const Vacio = ({ texto }: { texto: string }) => <p className="py-6 text-center text-sm text-slate-500">{texto}</p>
 
 function Leyenda({ items }: { items: [string, string][] }) {
   return (
@@ -181,7 +181,7 @@ function BarrasMeses({ meses, seleccionado, onElegir }: {
           <p className="mt-1 border-t border-white/20 pt-1">Ganancia: Bs {dinero(f.cobrado - f.gastos)}</p>
         </div>
       )}
-      <p className="mt-1 text-xs text-slate-400">Toca un mes para ver su detalle.</p>
+      <p className="mt-1 text-xs text-slate-500">Toca un mes para ver su detalle.</p>
     </div>
   )
 }
