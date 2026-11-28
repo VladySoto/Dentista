@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import Bloqueo from './components/Bloqueo'
+import CapaDialogos from './components/CapaDialogos'
 import Layout from './components/Layout'
 import './index.css'
 import Ajustes from './pages/Ajustes'
@@ -24,6 +25,7 @@ navigator.storage?.persist?.()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
+    <CapaDialogos />
     <BrowserRouter>
       <Routes>
         <Route path="t/:codigo" element={<TomarTurno />} />

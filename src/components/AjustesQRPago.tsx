@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import { db } from '../lib/db'
 import { useConfig } from '../lib/useConfig'
 import { Campo } from './ui'
+import { avisar } from '../lib/dialogo'
 
 /** Achica la captura del QR (máx. 700 px) manteniéndola nítida (PNG). */
 async function prepararImagen(file: File) {
@@ -48,7 +49,7 @@ export default function AjustesQRPago() {
             </Campo>
             <div className="flex flex-wrap gap-2">
               <button className="btn-soft px-3 py-2" onClick={() => input.current?.click()}><ImagePlus size={16} /> Cambiar imagen</button>
-              <button className="btn-ghost px-3 py-2 text-rose-600" onClick={() => confirm('¿Quitar el QR de cobro?') && db.config.update('general', { qrPago: undefined })}><Trash2 size={16} /> Quitar</button>
+              <button className="btn-ghost px-3 py-2 text-rose-600" onClick={async () => { const antes = config.qrPago; await db.config.update('general', { qrPago: undefined }); avisar('QR de cobro quitado', { texto: 'Deshacer', hacer: () => { db.config.update('general', { qrPago: antes }) } }) }}><Trash2 size={16} /> Quitar</button>
             </div>
           </div>
         </div>

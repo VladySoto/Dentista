@@ -129,6 +129,7 @@ function MiTurno({ codigo, mio, onOtro }: { codigo: string; mio: Guardado; onOtr
   const [e, setE] = useState<Estado | null>(null)
   const [avisos, setAvisos] = useState(() => typeof Notification !== 'undefined' && Notification.permission === 'granted')
   const avisado = useRef<{ cerca?: boolean; turno?: boolean }>({})
+  const [confirmarOtro, setConfirmarOtro] = useState(false)
 
   const consultar = useCallback(async () => {
     const { data } = await supabase.rpc('mi_turno', { p_codigo: codigo, p_turno: mio.turno })
@@ -211,7 +212,17 @@ function MiTurno({ codigo, mio, onOtro }: { codigo: string; mio: Guardado; onOtr
         <p className="flex items-center justify-center gap-2 rounded-2xl bg-teal-50 p-3 text-base text-teal-800"><BellRing size={20} /> Le avisaremos con sonido y vibración</p>
       )}
       <p className="text-base text-slate-500">Deje esta página abierta: se actualiza sola y le avisa cuando llamen su ficha.</p>
-      <button className="text-sm text-slate-500 underline" onClick={() => confirm('¿Registrar otra ficha? Esta ya no se mostrará aquí.') && onOtro()}>Me equivoqué de número</button>
+      {!confirmarOtro ? (
+        <button className="text-sm text-slate-500 underline" onClick={() => setConfirmarOtro(true)}>Me equivoqué de número</button>
+      ) : (
+        <div className="rounded-2xl bg-white p-4 text-base shadow-sm">
+          <p className="mb-3">¿Registrar otra ficha? Esta ya no se mostrará aquí.</p>
+          <div className="flex gap-2">
+            <button className="flex-1 rounded-xl bg-teal-700 py-2.5 font-semibold text-white" onClick={onOtro}>Sí, registrar otra</button>
+            <button className="flex-1 rounded-xl bg-slate-100 py-2.5 font-semibold" onClick={() => setConfirmarOtro(false)}>No</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

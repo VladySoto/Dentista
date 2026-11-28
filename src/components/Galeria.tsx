@@ -5,6 +5,7 @@ import { borrarImagen, guardarImagen, obtenerImagen } from '../lib/archivos'
 import { db, type Archivo, type TipoArchivo } from '../lib/db'
 import { fechaCorta, hora } from '../lib/format'
 import { Vacio } from './ui'
+import { confirmar } from '../lib/dialogo'
 
 const TIPOS: Record<TipoArchivo, string> = { foto: 'Foto', radiografia: 'Radiografía' }
 
@@ -107,7 +108,7 @@ function Visor({ archivo, onCerrar }: { archivo: Archivo; onCerrar: () => void }
         </div>
         {url && <a href={url} target="_blank" rel="noreferrer" className="btn px-3 py-2 text-white hover:bg-white/10" aria-label="Abrir en tamaño completo"><ExternalLink size={20} /></a>}
         <button className="btn px-3 py-2 text-rose-300 hover:bg-white/10" aria-label="Eliminar"
-          onClick={async () => { if (confirm('¿Eliminar esta imagen? También se borrará de la nube.')) { await borrarImagen(archivo.id!); onCerrar() } }}>
+          onClick={async () => { if (await confirmar({ titulo: '¿Eliminar esta imagen?', texto: 'También se borrará de la nube.', si: 'Eliminar', peligro: true })) { await borrarImagen(archivo.id!); onCerrar() } }}>
           <Trash2 size={20} />
         </button>
         <button className="btn px-3 py-2 text-white hover:bg-white/10" onClick={onCerrar} aria-label="Cerrar"><X size={24} /></button>

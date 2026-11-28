@@ -6,6 +6,7 @@ import { dinero, fechaCorta, normalizar } from '../lib/format'
 import { compartirODescargar, pdfDocumento } from '../lib/pdf'
 import { useConfig } from '../lib/useConfig'
 import { Campo } from './ui'
+import { avisar, borrarConDeshacer, confirmar } from '../lib/dialogo'
 
 /** Genera el PDF y lo comparte (WhatsApp, etc.) o lo descarga. */
 function useExportar(paciente: Paciente) {
@@ -63,9 +64,13 @@ export function RecetaForm({ paciente, onListo }: { paciente: Paciente; onListo:
 
   async function guardar(descargar: boolean) {
     const lista = meds.filter((m) => m.nombre.trim())
-    if (!lista.length) return alert('Agrega al menos un medicamento.')
+    if (!lista.length) return avisar('Agrega al menos un medicamento.')
     const peligrosos = lista.filter((m) => alertaAlergia(paciente.alergias, m.nombre))
-    if (peligrosos.length && !confirm(`⚠️ ${paciente.nombre} tiene alergia a: ${paciente.alergias}\n\nRevisa: ${peligrosos.map((m) => m.nombre).join(', ')}\n\n¿Emitir la receta igual?`)) return
+    if (peligrosos.length && !(await confirmar({
+      titulo: `⚠️ ${paciente.nombre} tiene alergia a: ${paciente.alergias}`,
+      texto: `Revisa: ${peligrosos.map((m) => m.nombre).join(', ')}`,
+      si: 'Emitir la receta igual', no: 'Revisar', peligro: true,
+    }))) return
     const d: Documento = { pacienteId: paciente.id!, fecha: Date.now(), tipo: 'receta', medicamentos: lista, indicaciones: indicaciones.trim() || undefined }
     d.id = (await db.documentos.add(d)) as number
     await exportar(d, descargar)
@@ -138,7 +143,7 @@ export function PresupuestoForm({ paciente, onListo }: { paciente: Paciente; onL
 
   async function guardar(descargar: boolean) {
     const lista = items.filter((it) => it.tratamiento.trim())
-    if (!lista.length) return alert('Agrega al menos un tratamiento.')
+    if (!lista.length) return avisar('Agrega al menos un tratamiento.')
     const d: Documento = {
       pacienteId: paciente.id!, fecha: Date.now(), tipo: 'presupuesto', items: lista,
       descuento: desc || undefined, validezDias: Math.max(1, Number(validez) || 30), notas: notas.trim() || undefined,
@@ -219,7 +224,7 @@ export function DocumentoItem({ d, paciente }: { d: Documento; paciente: Pacient
           <button className="btn-ghost px-2.5 py-1.5 text-xs" disabled={ocupado} onClick={() => exportar(d)}><Share2 size={14} /> Compartir</button>
           <button className="btn-ghost px-2.5 py-1.5 text-xs" disabled={ocupado} onClick={() => exportar(d, true)}><Download size={14} /> PDF</button>
           <button className="btn-ghost ml-auto p-1.5 text-slate-500 hover:text-rose-600" aria-label="Eliminar"
-            onClick={() => confirm(receta ? '¿Eliminar esta receta?' : '¿Eliminar este presupuesto?') && db.documentos.delete(d.id!)}><Trash2 size={14} /></button>
+            onClick={() => borrarConDeshacer('documentos', d.id!, receta ? 'Receta eliminada' : 'Presupuesto eliminado')}><Trash2 size={14} /></button>
         </div>
       </div>
     </li>

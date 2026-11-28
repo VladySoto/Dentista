@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useSync } from '../lib/sync'
 import { useConfig } from '../lib/useConfig'
 import { Modal } from './ui'
+import { confirmar } from '../lib/dialogo'
 
 type Estado = Awaited<ReturnType<typeof estadoBloqueo>>
 
@@ -144,7 +145,7 @@ function Recuperar({ onListo }: { onListo: () => void }) {
     <div className="space-y-4 text-sm text-slate-600">
       <p>Este dispositivo no tiene cuenta en la nube, así que no hay forma de comprobar quién eres.</p>
       <p>La única opción es <b>borrar todos los datos de este dispositivo</b> y empezar de nuevo (o restaurar un respaldo).</p>
-      <button className="btn-danger w-full" onClick={() => confirm('¿Borrar TODOS los datos de este dispositivo? No se puede deshacer.') && borrarDispositivo()}>Borrar datos del dispositivo</button>
+      <button className="btn-danger w-full" onClick={async () => (await confirmar({ titulo: '¿Borrar todos los datos de este dispositivo?', texto: 'No se puede deshacer.', si: 'Borrar todo', peligro: true })) && borrarDispositivo()}>Borrar datos del dispositivo</button>
     </div>
   )
 

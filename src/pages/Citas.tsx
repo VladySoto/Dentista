@@ -7,6 +7,7 @@ import { Campo, Encabezado, Modal, Vacio } from '../components/ui'
 import { avisoWhatsApp, db, hoy, varsPlantilla, type Cita, type EstadoCita } from '../lib/db'
 import { fechaLarga } from '../lib/format'
 import { useConfig } from '../lib/useConfig'
+import { borrarConDeshacer } from '../lib/dialogo'
 
 const ESTADO: Record<EstadoCita, { label: string; cls: string }> = {
   pendiente: { label: 'Pendiente', cls: 'bg-slate-100 text-slate-600' },
@@ -101,7 +102,7 @@ export default function Citas() {
                     {Object.entries(ESTADO).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                   </select>
                   {wa && <a href={wa} target="_blank" rel="noreferrer" className="btn-ghost px-2.5 py-1.5 text-xs"><MessageCircle size={15} /> Recordar</a>}
-                  <button className="btn-ghost ml-auto px-2.5 py-1.5 text-xs text-rose-600" onClick={() => confirm('¿Eliminar cita?') && db.citas.delete(c.id!)}><Trash2 size={15} /></button>
+                  <button className="btn-ghost ml-auto px-2.5 py-1.5 text-xs text-rose-600" onClick={() => borrarConDeshacer('citas', c.id!, 'Cita eliminada')}><Trash2 size={15} /></button>
                 </div>
               </div>
             )

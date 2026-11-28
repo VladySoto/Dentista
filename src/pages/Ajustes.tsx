@@ -11,6 +11,7 @@ import { useSync } from '../lib/sync'
 import { fechaCorta, hora } from '../lib/format'
 import { guardarRespaldo, useRespaldo } from '../lib/respaldo'
 import { useConfig } from '../lib/useConfig'
+import { borrarConDeshacer, confirmar } from '../lib/dialogo'
 
 export default function Ajustes() {
   return (
@@ -128,7 +129,7 @@ function Tratamientos() {
             <input className="input w-24 border-transparent px-2 py-1.5 text-right hover:border-slate-200" type="number" inputMode="decimal" min="0" defaultValue={t.precio}
               onBlur={(e) => Number(e.target.value) !== t.precio && db.tratamientos.update(t.id!, { precio: Number(e.target.value) || 0 })} aria-label="Precio" />
             <button className="btn-ghost p-2 text-slate-500 hover:text-rose-600" aria-label={`Eliminar ${t.nombre}`}
-              onClick={() => confirm(`¿Eliminar “${t.nombre}”?`) && db.tratamientos.delete(t.id!)}><Trash2 size={16} /></button>
+              onClick={() => borrarConDeshacer('tratamientos', t.id!, `“${t.nombre}” eliminado`)}><Trash2 size={16} /></button>
           </div>
         ))}
       </div>
@@ -252,7 +253,7 @@ function Medicamentos() {
                     onBlur={(e) => e.target.value !== m.indicacion && db.medicamentos.update(m.id!, { indicacion: e.target.value.trim() })} />
                 </div>
                 <button className="btn-ghost p-2 text-slate-500 hover:text-rose-600" aria-label={`Eliminar ${m.nombre}`}
-                  onClick={() => confirm(`¿Eliminar “${m.nombre}”?`) && db.medicamentos.delete(m.id!)}><Trash2 size={16} /></button>
+                  onClick={() => borrarConDeshacer('medicamentos', m.id!, `“${m.nombre}” eliminado`)}><Trash2 size={16} /></button>
               </div>
             ))}
           </div>
@@ -315,7 +316,7 @@ function Respaldo() {
 
   async function restaurar(file?: File) {
     if (!file) return
-    if (!confirm(`Esto reemplazará TODOS los datos actuales con los del respaldo${sesion ? ', también en la nube y en tus otros dispositivos' : ''}. ¿Continuar?`)) return
+    if (!(await confirmar({ titulo: '¿Restaurar este respaldo?', texto: `Reemplazará todos los datos actuales${sesion ? ', también en la nube y en tus otros dispositivos' : ''}.`, si: 'Restaurar', peligro: true }))) return
     try {
       await importarRespaldo(JSON.parse(await file.text()))
       setMsg('Datos restaurados correctamente.')

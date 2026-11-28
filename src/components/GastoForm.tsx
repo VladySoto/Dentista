@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { CATEGORIAS_GASTO, db, type Gasto, type MetodoPago } from '../lib/db'
 import { MetodoSelector } from './Cobro'
 import { Campo } from './ui'
+import { borrarConDeshacer } from '../lib/dialogo'
 
 const aFechaInput = (ts: number) => new Date(ts - new Date(ts).getTimezoneOffset() * 60000).toISOString().slice(0, 10)
 
@@ -42,7 +43,7 @@ export default function GastoForm({ inicial, onListo }: { inicial?: Gasto; onLis
       </div>
       <button className="btn-primary w-full">{inicial ? 'Guardar cambios' : 'Guardar gasto'}</button>
       {inicial && (
-        <button type="button" className="btn-danger w-full" onClick={async () => { if (confirm('¿Eliminar este gasto?')) { await db.gastos.delete(inicial.id!); onListo() } }}>Eliminar gasto</button>
+        <button type="button" className="btn-danger w-full" onClick={async () => { await borrarConDeshacer('gastos', inicial.id!, 'Gasto eliminado'); onListo() }}>Eliminar gasto</button>
       )}
     </form>
   )

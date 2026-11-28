@@ -11,6 +11,7 @@ import Dexie, { type Table, type Transaction } from 'dexie'
 import { useSyncExternalStore } from 'react'
 import { db, type Pendiente } from './db'
 import { supabase } from './supabase'
+import { confirmar } from './dialogo'
 
 const TABLAS = ['pacientes', 'turnos', 'citas', 'consultas', 'pagos', 'tratamientos', 'config', 'archivos', 'documentos', 'medicamentos', 'odontogramas', 'gastos', 'materiales'] as const
 type NombreTabla = (typeof TABLAS)[number]
@@ -246,10 +247,11 @@ async function prepararDispositivo(uid: string, combinar: () => Promise<boolean>
 // ---------------------------------------------------------------- sesión
 
 let canal: RealtimeChannel | null = null
-let preguntaCombinar: () => Promise<boolean> = async () => window.confirm(
-  'Este dispositivo tiene pacientes guardados que no están en la nube.\n\n' +
-  'Aceptar: subirlos y combinarlos con los de la nube.\nCancelar: borrarlos de aquí y usar solo los de la nube.',
-)
+let preguntaCombinar: () => Promise<boolean> = () => confirmar({
+  titulo: 'Este dispositivo tiene pacientes que no están en la nube',
+  texto: '¿Los subimos y combinamos con los de la nube, o los borramos de aquí y usamos solo los de la nube?',
+  si: 'Subir y combinar', no: 'Usar solo la nube',
+})
 
 async function alIniciarSesion(sesion: Session) {
   actualizar({ sesion, estado: 'sincronizando' })

@@ -5,6 +5,7 @@ import { Campo, Encabezado, Modal, Vacio } from '../components/ui'
 import { db, type Material } from '../lib/db'
 import { fechaCorta, normalizar } from '../lib/format'
 import { alertas, type AlertaMaterial } from '../lib/inventario'
+import { borrarConDeshacer } from '../lib/dialogo'
 
 const ETIQUETA: Record<AlertaMaterial, { texto: string; cls: string }> = {
   agotado: { texto: 'Agotado', cls: 'bg-rose-100 text-rose-700' },
@@ -111,7 +112,7 @@ function MaterialForm({ inicial, onListo }: { inicial?: Material; onListo: () =>
       </div>
       <Campo label="Vence (opcional)"><input className="input" type="date" value={m.vence} onChange={(e) => setM({ ...m, vence: e.target.value })} /></Campo>
       <button className="btn-primary w-full">{inicial ? 'Guardar cambios' : 'Agregar material'}</button>
-      {inicial && <button type="button" className="btn-danger w-full" onClick={async () => { if (confirm(`¿Eliminar “${inicial.nombre}”?`)) { await db.materiales.delete(inicial.id!); onListo() } }}>Eliminar material</button>}
+      {inicial && <button type="button" className="btn-danger w-full" onClick={async () => { await borrarConDeshacer('materiales', inicial.id!, `“${inicial.nombre}” eliminado`); onListo() }}>Eliminar material</button>}
     </form>
   )
 }

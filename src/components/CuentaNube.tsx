@@ -2,6 +2,7 @@ import { Cloud, CloudOff, LogOut, RefreshCw } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { cerrarSesion, crearCuenta, iniciarSesion, sincronizar, useSync } from '../lib/sync'
 import { Campo } from './ui'
+import { confirmar } from '../lib/dialogo'
 
 export default function CuentaNube() {
   const s = useSync()
@@ -48,7 +49,7 @@ export default function CuentaNube() {
           <button className="btn-soft" onClick={() => sincronizar()} disabled={s.estado === 'sincronizando'}>
             <RefreshCw size={17} className={s.estado === 'sincronizando' ? 'animate-spin' : ''} /> Sincronizar ahora
           </button>
-          <button className="btn-ghost" onClick={() => confirm('¿Cerrar sesión en este dispositivo? Los datos se quedan guardados aquí.') && cerrarSesion()}>
+          <button className="btn-ghost" onClick={async () => (await confirmar({ titulo: '¿Cerrar sesión en este dispositivo?', texto: 'Los datos se quedan guardados aquí y en la nube.', si: 'Cerrar sesión' })) && cerrarSesion()}>
             <LogOut size={17} /> Cerrar sesión
           </button>
         </div>

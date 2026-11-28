@@ -5,6 +5,7 @@ import { db } from '../lib/db'
 import { nuevoCodigoQR, urlTurnos, useQR } from '../lib/qr'
 import { useSync } from '../lib/sync'
 import { useConfig } from '../lib/useConfig'
+import { confirmar } from '../lib/dialogo'
 
 export default function TurnosQR() {
   const config = useConfig()
@@ -42,12 +43,12 @@ export default function TurnosQR() {
         </div>
       </div>
       <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3">
-        <button className="btn-ghost px-3 py-1.5 text-xs" onClick={() =>
-          confirm('¿Cambiar el código? El cartel actual dejará de funcionar y tendrás que imprimir uno nuevo. Úsalo solo si alguien está abusando del QR.') && guardarCodigo(nuevoCodigoQR())}>
+        <button className="btn-ghost px-3 py-1.5 text-xs" onClick={async () =>
+          (await confirmar({ titulo: '¿Cambiar el código del QR?', texto: 'El cartel actual dejará de funcionar y tendrás que imprimir uno nuevo. Úsalo solo si alguien está abusando del QR.', si: 'Cambiar código', peligro: true })) && guardarCodigo(nuevoCodigoQR())}>
           <RefreshCw size={14} /> Cambiar código
         </button>
-        <button className="btn-ghost px-3 py-1.5 text-xs text-rose-600" onClick={() =>
-          confirm('¿Desactivar los turnos por QR? El cartel dejará de funcionar.') && guardarCodigo(undefined)}>
+        <button className="btn-ghost px-3 py-1.5 text-xs text-rose-600" onClick={async () =>
+          (await confirmar({ titulo: '¿Desactivar el QR de los pacientes?', texto: 'El cartel dejará de funcionar.', si: 'Desactivar', peligro: true })) && guardarCodigo(undefined)}>
           Desactivar
         </button>
       </div>

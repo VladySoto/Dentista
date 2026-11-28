@@ -15,6 +15,7 @@ import {
 import { dinero, duracion, fechaLarga, hora, minutosDesde } from '../lib/format'
 import { useAhora } from '../lib/useAhora'
 import { useConfig } from '../lib/useConfig'
+import { borrarConDeshacer } from '../lib/dialogo'
 
 /**
  * Sala de espera con UN SOLO NÚMERO: el de la ficha de papel que toma cada paciente al llegar.
@@ -117,7 +118,7 @@ export default function SalaEspera() {
     await registrarLlegada(pacienteId, m, 0)
     await db.citas.update(citaId, { estado: 'llego' })
   }
-  const quitar = (t: Turno) => confirm(`¿Quitar la ${etiquetaTurno(t).toLowerCase()} de la lista?`) && db.turnos.delete(t.id!)
+  const quitar = (t: Turno) => borrarConDeshacer('turnos', t.id!, `${etiquetaTurno(t)} quitada de la lista`)
 
   return (
     <>

@@ -18,6 +18,7 @@ import { dinero, duracion, edad, fechaCorta, fechaLarga, hora, minutosDesde } fr
 import { borrarImagen } from '../lib/archivos'
 import { useAhora } from '../lib/useAhora'
 import { useConfig } from '../lib/useConfig'
+import { borrarConDeshacer, confirmar } from '../lib/dialogo'
 
 type Tab = 'historial' | 'fotos' | 'odontograma' | 'datos'
 type ModalConsulta = { modo: 'turno' } | { modo: 'nueva' } | { modo: 'editar'; consulta: Consulta } | null
@@ -80,13 +81,13 @@ export default function PacienteDetalle() {
   }
 
   async function terminarSinRegistrar() {
-    if (!turno || !confirm('¿Terminar la atención sin registrar una consulta?')) return
+    if (!turno || !(await confirmar({ titulo: '¿Terminar sin registrar una consulta?', si: 'Terminar' }))) return
     await db.turnos.update(turno.id!, { estado: 'atendido', fin: Date.now() })
     navigate('/')
   }
 
   async function eliminar() {
-    if (!confirm(`¿Eliminar a ${p!.nombre} y todo su historial? Esta acción no se puede deshacer.`)) return
+    if (!(await confirmar({ titulo: `¿Eliminar a ${p!.nombre}?`, texto: 'Se borra todo su historial, fotos, pagos y citas, también en la nube. No se puede deshacer.', si: 'Eliminar paciente', peligro: true }))) return
     for (const a of (await db.archivos.where('pacienteId').equals(id).primaryKeys()) as number[]) await borrarImagen(a)
     await db.transaction('rw', [db.pacientes, db.consultas, db.turnos, db.citas, db.pagos, db.documentos, db.odontogramas], async () => {
       for (const t of [db.consultas, db.turnos, db.citas, db.pagos, db.documentos, db.odontogramas]) await t.where('pacienteId').equals(id).delete()
@@ -285,7 +286,7 @@ export default function PacienteDetalle() {
         )}
         {modalConsulta?.modo === 'editar' && (
           <button className="btn-danger mt-3 w-full" onClick={async () => {
-            if (confirm('¿Eliminar esta consulta?')) { await db.consultas.delete(modalConsulta.consulta.id!); setModalConsulta(null) }
+            await borrarConDeshacer('consultas', modalConsulta.consulta.id!, 'Consulta eliminada'); setModalConsulta(null)
           }}><Trash2 size={16} /> Eliminar consulta</button>
         )}
       </Modal>
@@ -315,7 +316,7 @@ function PagoItem({ pg, paciente }: { pg: Pago; paciente: Paciente }) {
         <span className="flex items-center gap-1 text-xs text-slate-500">
           {fechaCorta(pg.fecha)}
           <BotonRecibo paciente={paciente} datos={{ id: pg.id!, fecha: pg.fecha, monto: pg.monto, concepto: `Abono a cuenta${pg.nota ? ` (${pg.nota})` : ''}`, metodo: pg.metodo }} />
-          <button aria-label="Eliminar pago" className="text-slate-500 hover:text-rose-600" onClick={() => confirm('¿Eliminar este pago?') && db.pagos.delete(pg.id!)}><Trash2 size={14} /></button>
+          <button aria-label="Eliminar pago" className="text-slate-500 hover:text-rose-600" onClick={() => borrarConDeshacer('pagos', pg.id!, 'Pago eliminado')}><Trash2 size={14} /></button>
         </span>
       </div>
     </li>
